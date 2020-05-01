@@ -1,0 +1,46 @@
+﻿  Source.cpp
+e:\opengl projects\p3d_model_viewer\p3d_model_viewer\loadshaders.h(36): warning C4005: '_DEBUG': macro redefinition
+  e:\opengl projects\p3d_model_viewer\p3d_model_viewer\source.cpp: note: see previous definition of '_DEBUG'
+LoadShaders.obj : error LNK2001: unresolved external symbol ___glewAttachShader
+LoadShaders.obj : error LNK2001: unresolved external symbol ___glewCompileShader
+LoadShaders.obj : error LNK2001: unresolved external symbol ___glewCreateProgram
+LoadShaders.obj : error LNK2001: unresolved external symbol ___glewCreateShader
+LoadShaders.obj : error LNK2001: unresolved external symbol ___glewDeleteShader
+LoadShaders.obj : error LNK2001: unresolved external symbol ___glewGetProgramInfoLog
+LoadShaders.obj : error LNK2001: unresolved external symbol ___glewGetProgramiv
+LoadShaders.obj : error LNK2001: unresolved external symbol ___glewGetShaderInfoLog
+LoadShaders.obj : error LNK2001: unresolved external symbol ___glewGetShaderiv
+LoadShaders.obj : error LNK2001: unresolved external symbol ___glewLinkProgram
+LoadShaders.obj : error LNK2001: unresolved external symbol ___glewShaderSource
+Source.obj : error LNK2019: unresolved external symbol _glewInit@0 referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwInit referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwTerminate referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwGetPrimaryMonitor referenced in function "void __cdecl setFullScreen(struct GLFWwindow *)" (?setFullScreen@@YAXPAUGLFWwindow@@@Z)
+Source.obj : error LNK2019: unresolved external symbol _glfwGetVideoMode referenced in function "void __cdecl setFullScreen(struct GLFWwindow *)" (?setFullScreen@@YAXPAUGLFWwindow@@@Z)
+Source.obj : error LNK2019: unresolved external symbol _glfwWindowHint referenced in function "void __cdecl setFullScreen(struct GLFWwindow *)" (?setFullScreen@@YAXPAUGLFWwindow@@@Z)
+Source.obj : error LNK2019: unresolved external symbol _glfwCreateWindow referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwDestroyWindow referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwWindowShouldClose referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwSetWindowShouldClose referenced in function "void __cdecl InputManager(struct GLFWwindow *,int,int,int,int)" (?InputManager@@YAXPAUGLFWwindow@@HHHH@Z)
+Source.obj : error LNK2019: unresolved external symbol _glfwSetWindowMonitor referenced in function "void __cdecl setFullScreen(struct GLFWwindow *)" (?setFullScreen@@YAXPAUGLFWwindow@@@Z)
+Source.obj : error LNK2019: unresolved external symbol _glfwPollEvents referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwSetKeyCallback referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwSetCharModsCallback referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwSetScrollCallback referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwMakeContextCurrent referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwSwapBuffers referenced in function _main
+Source.obj : error LNK2019: unresolved external symbol _glfwSwapInterval referenced in function _main
+Source.obj : error LNK2001: unresolved external symbol ___glewBindBuffer
+Source.obj : error LNK2001: unresolved external symbol ___glewGenBuffers
+Source.obj : error LNK2001: unresolved external symbol ___glewEnableVertexAttribArray
+Source.obj : error LNK2001: unresolved external symbol ___glewUseProgram
+Source.obj : error LNK2001: unresolved external symbol ___glewVertexAttribPointer
+Source.obj : error LNK2001: unresolved external symbol ___glewClearBufferfv
+Source.obj : error LNK2001: unresolved external symbol ___glewBufferStorage
+Source.obj : error LNK2001: unresolved external symbol ___glewGetProgramResourceLocation
+Source.obj : error LNK2001: unresolved external symbol ___glewProgramUniformMatrix4fv
+Source.obj : error LNK2001: unresolved external symbol ___glewBindVertexArray
+Source.obj : error LNK2001: unresolved external symbol ___glewGenVertexArrays
+glew32s.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'x86'
+glfw3.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'x86'
+E:\OpenGL projects\P3D_Model_Viewer\Debug\P3D_Model_Viewer.exe : fatal error LNK1120: 40 unresolved externals
