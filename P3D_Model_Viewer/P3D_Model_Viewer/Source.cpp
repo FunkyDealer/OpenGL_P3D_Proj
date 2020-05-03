@@ -201,7 +201,7 @@ void display() {
 	);
 
 	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane);
-	//LocalWorld = rotate(IDENTITY, ANGLE += rotateSpeed, normalize(UP + RIGHT)); //Rotate Model Automatically
+	LocalWorld = rotate(IDENTITY, ANGLE += rotateSpeed, normalize(UP + RIGHT)); //Rotate Model Automatically
 
 	mat4 ModelViewProjection = Projection * View * LocalWorld;
 
@@ -232,7 +232,7 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 		case GLFW_KEY_2:
 			setWindowedScreen(window);
 			break;
-		case GLFW_KEY_LEFT:
+	/*	case GLFW_KEY_LEFT:
 			LocalWorld = rotate(IDENTITY, ANGLE -= 1, normalize(UP));
 			break;
 		case GLFW_KEY_RIGHT:
@@ -243,7 +243,7 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 			break;
 		case GLFW_KEY_DOWN:
 			LocalWorld = rotate(IDENTITY, ANGLE += 1, normalize(RIGHT));
-			break;
+			break;*/
 		}
 	}
 }
@@ -296,7 +296,7 @@ void mousePosCallBack(GLFWwindow* window, double xpos, double ypos) {
 
 
 
-		LocalWorld = rotate(LocalWorld, ANGLE += rotateSpeed, normalize(direction));
+		//LocalWorld = rotate(LocalWorld, ANGLE += rotateSpeed, normalize(direction));
 	}
 }
 
