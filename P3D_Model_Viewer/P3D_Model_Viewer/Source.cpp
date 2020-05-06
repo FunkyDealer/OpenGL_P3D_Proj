@@ -2,8 +2,6 @@
 #include "LoadShaders.h"
 #include "Model.h"
 
-using namespace Model_Viewer;
-
 int screenWidth = 800;
 int screenHeight = 600;
 char title[20] = "Exercicio Cubo";
@@ -89,18 +87,17 @@ void init() {
 
 	switch (geometry) {
 	case 1: //Triangle
-		numVertices += 3;
-		model.vertices = LoadTriangle();
-		model.colors = LoadTriangleColors();
+		model = LoadTriangle();
+		numVertices += model.modelTotalVertices;
 		break;
 	case 2: //Cube
-		numVertices += 6 * 6;
-		model.vertices = LoadCube(); //Load Cube Vertices
-		model.colors = LoadColors(); //Load Colors Vertices
+		model = LoadCube(); //Load Cube Vertices
+		numVertices += model.modelTotalVertices;
 		break;
 	case 3: //Model
-		
-
+		model = Load3dModel("Iron_Man.xyz");
+		numVertices += model.modelTotalVertices;
+		break;
 	default:
 		throw "Invalid geometry selected";
 		break;
@@ -127,7 +124,7 @@ void init() {
 	glGenBuffers(NumBuffers, Buffers); //Generate NumBufffer names for VBOs
 
 	for (int i = 0; i < NumBuffers; i++) { //For each Name of VBO
-
+		
 		glBindBuffer(GL_ARRAY_BUFFER, Buffers[i]); //Bind VBO to buffer GL_ARRAY_BUFFER
 		if (i == 0) {
 			//glBufferStorage(GL_ARRAY_BUFFER, sizeof(vertices) /*3 * 3 * sizeof(float)*/, vertices, 0); //Initialize the VBO that's active

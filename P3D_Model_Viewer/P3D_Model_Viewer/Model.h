@@ -8,6 +8,12 @@ namespace Model_Viewer {
 		public:
 			GLfloat *vertices;
 			GLfloat *colors;
+			GLfloat *textures;
+			GLfloat *normals;
+			float modelTotalVertices;
+			float modelTotalColors;
+			float modelTotalTextures;
+			float modelTotalNormals;
 
 			Model(GLfloat &v, GLfloat &vc) {
 
