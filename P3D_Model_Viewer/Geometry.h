@@ -10,6 +10,8 @@
 #include <vector>
 #include <string>
 
+#include "Model.h"
+
 #define GLEW_STATIC
 #include <GL\glew.h>
 #include <glm\glm.hpp>
@@ -18,7 +20,10 @@
 
 #define GLFW_USE_DWM_SWAP_INTERVAL
 #include <GLFW\glfw3.h>
-#include "Model.h"
+
+
+//#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 using namespace glm;
 using namespace std;
@@ -38,7 +43,8 @@ using namespace Model_Viewer;
 	//Geometry.cpp Functions
 	Model LoadCube();
 	Model LoadTriangle();
-	Model Load3dModel(string fileName);
+	Model LoadXYZModel(string fileName);
+	Material getMaterial();
 
 	//Source.cpp Functions
 	void init();
@@ -50,5 +56,4 @@ using namespace Model_Viewer;
 	void scrollCallback(GLFWwindow * window, double xoffset, double yoffset);
 	void mouseClickCallBack(GLFWwindow* window, int button, int action, int mods);
 	void mousePosCallBack(GLFWwindow* window, double xpos, double ypos);
-	void resetKeys();
 

@@ -77,6 +77,7 @@ Model LoadCube() {
 	}
 
 	model.colors = colors;
+	model.setName("cube");
 	
 	return model;
 }
@@ -115,24 +116,36 @@ Model LoadTriangle() {
 	}
 
 	model.colors = colors;
+	model.setName("Triangle");
 
 	return model;
 }
 
 
 
-Model Load3dModel(string fileName)
+Model LoadXYZModel(string fileName)
 {
 	Model model;
-	vector<float> Vertices[3], Text_Coords[2], Vertice_Normals[3];
-	float X = 0, Y = 0, Z = 0, XT = 0, YT = 0, XN = 0, YN = 0, ZN = 0;
-	string material = "";
+	model.setName(fileName);
+	//vector<vec3> VerticesVec;
+	vector<GLfloat> Vertices[3], Text_Coords[2], Vertice_Normals[3];
+	GLfloat X = 0, Y = 0, Z = 0, XT = 0, YT = 0, XN = 0, YN = 0, ZN = 0;
+	string material = "test";
 	ifstream file(fileName);
 	int nv = 0, nvt = 0, nvn = 0;
+
+
 	if (file.is_open())
 	{
 		//GLint size;
 		string line;
+
+		file >> line;
+		if (line.compare("mtllib") == 0)
+		{
+			file >> material;
+			cout << "fount material " << material << endl;
+		}
 
 		//getline(file, material);
 
@@ -140,41 +153,44 @@ Model Load3dModel(string fileName)
 		{
 			file >> line;
 
-			if (line == "v")
+			if (line.compare("mtllib") == 0)
 			{
-				file >> X;
-				file >> Y;
-				file >> Z;
+				file >> material;
+				cout << "fount material " << material << endl;
+			}
+			else if (line == "v")
+			{
+				file >> X >> Y >> Z;
+				//file >> Y;
+				//file >> Z;
+				
 				Vertices[0].push_back(X);
 				Vertices[1].push_back(Y);
-				Vertices[2].push_back(Z);
-				nv++;
-
-				
+				Vertices[2].push_back(Z);	
+				//VerticesVec.push_back(vec3(X, Y, Z));
+				nv++;				
 			}
 			else if (line == "vt")
 			{
-				file >> XT;
-				file >> YT;
+				file >> XT >> YT;
+				//file >> YT;
 				Text_Coords[0].push_back(XT);
 				Text_Coords[1].push_back(YT);
 				nvt++;
 			}
 			else if (line == "vn")
 			{
-				file >> XN;
-				file >> YN;
-				file >> ZN;
+				file >> XN >> YN >> ZN;
+				//file >> YN;
+				//file >> ZN;
 				Vertice_Normals[0].push_back(XN);
 				Vertice_Normals[1].push_back(YN);
 				Vertice_Normals[2].push_back(ZN);
 
 				nvn++;
 			}
-
 		}
 		int n = 0;
-
 		/*while (n < Vertices[0].size())
 		{
 			cout << "Coordenada " << n << " :" << endl;
@@ -189,6 +205,7 @@ Model Load3dModel(string fileName)
 		model.modelTotalNormals = nvn;
 		model.modelTotalTextures = nvt;
 		model.modelTotalColors = nv;
+		model.setMaterialFile(material);
 		cout << "ENDED ALL POINTS" << endl;
 		cout << "TOTAL VERTICES FOUND: " << model.modelTotalVertices << endl;
 		cout << "TOTAL TEXTURE COORDENATES FOUND: " << model.modelTotalNormals << endl;
@@ -269,5 +286,22 @@ Model Load3dModel(string fileName)
 
 	model.colors = verticesColors;
 
+	model.material = getMaterial();
+	
+
 	return model;
 }
+
+Material getMaterial() {
+	Material material;
+
+	//Todo
+
+
+	return material;
+}
+
+
+
+
+

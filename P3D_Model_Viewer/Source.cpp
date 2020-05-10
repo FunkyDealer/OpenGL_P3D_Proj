@@ -38,6 +38,7 @@ vec2 mouse1PressLocation = vec2(0, 0);
 vec3 camLocation = vec3(0.0f, camHeight, zoom);
 vec3 camTarget = vec3(0.0f, targetHeight, 0.0f);
 vec3 camDirection = camTarget - camLocation;
+bool isRotating = true;
 
 int main() {
 	GLFWwindow *window;
@@ -102,7 +103,7 @@ void init() {
 		numVertices += model.modelTotalVertices;
 		break;
 	case 3: //Model
-		model = Load3dModel("Model/Iron_Man.xyz");
+		model = LoadXYZModel("Model/Iron_Man.xyz");
 		numVertices += model.modelTotalVertices;
 		break;
 	default:
@@ -195,7 +196,7 @@ void display() {
 
 	glPolygonMode(GL_FRONT_AND_BACK, /*GL_FILL */ GL_LINE /*GL_POINT*/);
 	glEnable(GL_LINE_SMOOTH); //activates antialiasing
-	glLineWidth(1.0f); //defines the line width
+	glLineWidth(0.5f); //defines the line width
 	//glPointSize(5.0f);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_BLEND); // Para que o GL_LINE_SMOOTH tenha efeito
@@ -216,8 +217,9 @@ void display() {
 		UP		// Camera Up Vector
 	);
 
-	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane);
-	LocalWorld = rotate(IDENTITY, ANGLE += rotateSpeed, normalize(UP)); //Rotate Model Automatically
+	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane); //Projection Matrix
+
+	if (isRotating) LocalWorld = rotate(IDENTITY, ANGLE += rotateSpeed, normalize(UP)); //Rotate Model Automatically
 
 	mat4 ModelViewProjection = Projection * View * LocalWorld;
 
@@ -229,8 +231,6 @@ void display() {
 
 	//Draws Primitives GL_TRIANGLES using active VAOs
 	glDrawArrays(GL_TRIANGLES, 0, numVertices);
-
-	//resetKeys();
 }
 
 
@@ -242,13 +242,13 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 		{
 		case GLFW_KEY_ESCAPE:
 			cout << "pressed esc" << endl;
-			glfwSetWindowShouldClose(window, 1); //Pede para fechar
+			glfwSetWindowShouldClose(window, 1); //asks to close
 			break;
 		case GLFW_KEY_1:
-			setFullScreen(window);
+			setFullScreen(window);					//Sets FullScreen
 			break;
 		case GLFW_KEY_2:
-			setWindowedScreen(window);
+			setWindowedScreen(window);				//Sets Windowed Mode
 			break;
 		case GLFW_KEY_LEFT:
 			
@@ -256,14 +256,17 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 		case GLFW_KEY_RIGHT:
 			
 			break;
-		case GLFW_KEY_UP:
-			if (mods == GLFW_MOD_CONTROL) camHeight += 1.0f;
-			else targetHeight += 1.0;			
+		case GLFW_KEY_UP:												
+			if (mods == GLFW_MOD_CONTROL) camHeight += 1.0f;			//Changes Camera Position(Height)
+			else targetHeight += 1.0;									//Changes Camera's Target Position(Height)
 			break;
 		case GLFW_KEY_DOWN:
-			if (mods == GLFW_MOD_CONTROL) camHeight -= 1.0f;
-			else targetHeight -= 1.0f;
+			if (mods == GLFW_MOD_CONTROL) camHeight -= 1.0f;			//Changes Camera Position(Height)
+			else targetHeight -= 1.0f;									//Changes Camera's Target Position(Height)
 			break;
+		case GLFW_KEY_R:
+			if (isRotating) isRotating = false;
+			else isRotating = true;
 		}
 	}
 }
@@ -288,7 +291,8 @@ void setFullScreen(GLFWwindow* window) { //Set Full screen
 
 	glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
 	glfwSetWindowMonitor(window, monitor, 0, 0, fullWidth, fullHeight, videoMode->refreshRate);
-
+	glfwGetFramebufferSize(window, &fullWidth, &fullHeight);
+	glViewport(0, 0, fullWidth, fullHeight);
 }
 
 void setWindowedScreen(GLFWwindow* window) { //Set Windowed
@@ -299,28 +303,24 @@ void setWindowedScreen(GLFWwindow* window) { //Set Windowed
 
 	glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
 	glfwSetWindowMonitor(window, NULL, videoMode->width / 3, videoMode->height / 3, screenWidth, screenHeight, videoMode->refreshRate);
+	glfwGetFramebufferSize(window, &screenHeight, &screenHeight);
+	glViewport(0, 0, screenWidth, screenHeight);
 }
 
-void scrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
+void scrollCallback(GLFWwindow *window, double xoffset, double yoffset) { //Scrolling CallBack
 	if (yoffset == 1) zoom += fabs(zoom) * 0.1f;
 	else if (yoffset == -1) zoom -= fabs(zoom) * 0.1f;
 }
 
-void mousePosCallBack(GLFWwindow* window, double xpos, double ypos) {
+void mousePosCallBack(GLFWwindow* window, double xpos, double ypos) { //Mouse Position CallBack - Gets Mouse Position every frame
 	if (mouse1Pressed) {
 		//cout << "X: " << xpos << " Y: " << ypos << endl;
 		vec2 currentLoc = vec2(xpos, ypos);
 		vec2 dir = currentLoc - mouse1PressLocation;
-
-		vec3 direction = vec3(dir.x, dir.y, 0);
-
-
-
-		//LocalWorld = rotate(LocalWorld, ANGLE += rotateSpeed, normalize(direction));
 	}
 }
 
-void mouseClickCallBack(GLFWwindow* window, int button, int action, int mods) {
+void mouseClickCallBack(GLFWwindow* window, int button, int action, int mods) { //On mouse Click Call Back
 	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) {
 		//cout << "mouse 1 pressed" << endl;
 		mouse1Pressed = true;
