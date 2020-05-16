@@ -32,7 +32,7 @@ static const GLchar* ReadShader(const char* filename) {
 		return const_cast<const GLchar*>(source);
 	}
 	else {
-		std::cerr << "Erro ao abrir o ficheiro '" << filename << "'" << std::endl;
+		std::cerr << "Error While Opening File '" << filename << "'" << std::endl;
 	}
 
 	return nullptr;

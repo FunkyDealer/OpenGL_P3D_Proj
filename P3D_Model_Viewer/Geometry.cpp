@@ -165,8 +165,6 @@ Model LoadXYZModel(string fileName)
 			else if (line == "v")
 			{
 				file >> X >> Y >> Z;
-				//file >> Y;
-				//file >> Z;
 				
 				Vertices[0].push_back(X);
 				Vertices[1].push_back(Y);
@@ -177,7 +175,6 @@ Model LoadXYZModel(string fileName)
 			else if (line == "vt")
 			{
 				file >> XT >> YT;
-				//file >> YT;
 				Text_Coords[0].push_back(XT);
 				Text_Coords[1].push_back(YT);
 				nvt++;
@@ -185,8 +182,6 @@ Model LoadXYZModel(string fileName)
 			else if (line == "vn")
 			{
 				file >> XN >> YN >> ZN;
-				//file >> YN;
-				//file >> ZN;
 				Vertice_Normals[0].push_back(XN);
 				Vertice_Normals[1].push_back(YN);
 				Vertice_Normals[2].push_back(ZN);
@@ -285,7 +280,6 @@ Model LoadXYZModel(string fileName)
 				break;
 			}
 		};
-
 	}
 
 	model.colors = verticesColors;
@@ -337,7 +331,6 @@ Material getMaterial(string file) {
 				matKA[0].push_back(X);
 				matKA[1].push_back(Y);
 				matKA[2].push_back(Z);
-
 			}
 			else if (line == "Kd")
 			{
@@ -368,12 +361,11 @@ Material getMaterial(string file) {
 			else if (line.compare("map") == 0)
 			{
 				fileMat >> MAP;
-				material.map = MAP;
+				material.map = "Model/";
+				material.map.append(MAP);
 
-				cout << "found map: " << MAP << endl;
+				cout << "found map: " << material.map << endl;
 			}
-
-
 		}
 		fileMat.close();
 	}
@@ -382,8 +374,6 @@ Material getMaterial(string file) {
 		cout << "ERROR, FILE NOT FOUND" << endl;
 		throw;
 	}
-
-
 	GLfloat* kaCoords = (GLfloat*)malloc(3 * 3 * sizeof(GLfloat)); //ka
 	int currentV = 0;
 

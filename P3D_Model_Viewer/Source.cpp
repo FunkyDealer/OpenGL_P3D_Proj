@@ -3,6 +3,11 @@
 
 #include "stb_image.h"
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+
 int screenWidth = 800;
 int screenHeight = 600;
 char title[20] = "Model Viewer";
@@ -108,12 +113,12 @@ void init() {
 	case 3: //Model
 		model = LoadXYZModel("Model/Iron_Man.xyz");
 		numVertices += model.modelTotalVertices;
+		load_Model_texture(model);
 		break;
 	default:
 		throw "Invalid geometry selected";
 		break;
 	}
-	load_Model_texture(model);
 	
 
 	cout << "Ended Model Creation" << endl;
@@ -239,8 +244,10 @@ void load_Model_texture(Model model) {
 	stbi_set_flip_vertically_on_load(true);
 	//Loading the Image to the CPU
 
-	//char[20] = model.getTextureFile()
-	unsigned char *imageData = stbi_load("Model/Iron_Man.tga", &width, &height, &nChannels, 0);
+	string textureFile = model.material.map; //Gets the texture file from the model's material
+	const char *cstr = textureFile.c_str(); //Converts the string to a constant char
+
+	unsigned char *imageData = stbi_load( cstr, &width, &height, &nChannels, 0);
 	if (imageData) {
 		//Loads the image data to the assigned texture object of the GL_TEXTURE_2d
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, nChannels == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, imageData);
@@ -265,6 +272,7 @@ void display() {
 	//glPointSize(5.0f);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_BLEND); // Para que o GL_LINE_SMOOTH tenha efeito
+	//glEnable(GL_CULL_FACE);
 
 	glClearBufferfv(GL_COLOR, 0, black); //Clears screen all black
 

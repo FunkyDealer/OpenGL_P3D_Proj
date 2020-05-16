@@ -10,6 +10,7 @@ using namespace std;
 #include <iostream>
 #include <vector>
 #include <string>
+#include <cstring>
 
 #include "Model.h"
 

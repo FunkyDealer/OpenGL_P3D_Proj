@@ -52,7 +52,7 @@ namespace Model_Viewer {
 			//cout << "model has been destroyed" << endl;
 		}
 
-		void setTextureFile(string file) {
+		void setTextureFile(string file) {			
 			textureFile = file;
 		}
 
@@ -61,6 +61,7 @@ namespace Model_Viewer {
 		}
 
 		string getTextureFile() {
+			cout << "texture File returned: " << textureFile << endl;
 			return textureFile;
 		}
 
