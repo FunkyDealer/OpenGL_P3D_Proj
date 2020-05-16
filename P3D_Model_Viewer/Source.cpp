@@ -1,6 +1,7 @@
 #include "Geometry.h"
 #include "LoadShaders.h"
-#include "Model.h"
+
+#include "stb_image.h"
 
 int screenWidth = 800;
 int screenHeight = 600;
@@ -8,7 +9,7 @@ char title[20] = "Model Viewer";
 
 //VAOS && VBOs
 #define NumVAOs 1
-#define NumBuffers 2 // Vertices, Cores
+#define NumBuffers 3 // Vertices, Cores, Textures
 GLuint VAOs[NumVAOs];
 GLuint Buffers[NumBuffers];
 
@@ -89,6 +90,8 @@ int main() {
 	return 0;
 }
 
+
+
 void init() {
 	//--------------------------- Create arrays in RAM ---------------------------
 	Model model;
@@ -110,6 +113,8 @@ void init() {
 		throw "Invalid geometry selected";
 		break;
 	}
+	load_Model_texture(model);
+	
 
 	cout << "Ended Model Creation" << endl;
 
@@ -134,15 +139,16 @@ void init() {
 	for (int i = 0; i < NumBuffers; i++) { //For each Name of VBO
 		
 		glBindBuffer(GL_ARRAY_BUFFER, Buffers[i]); //Bind VBO to buffer GL_ARRAY_BUFFER
-		if (i == 0) {
-			//glBufferStorage(GL_ARRAY_BUFFER, sizeof(vertices) /*3 * 3 * sizeof(float)*/, vertices, 0); //Initialize the VBO that's active
+		switch (i) {
+		case 0:
 			glBufferStorage(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), model.vertices, 0); //Initialize the VBO that's active
-			//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); //Initialize VBO 
-		}
-		else {
-			//glBufferStorage(GL_ARRAY_BUFFER, sizeof(colors) /*3 * 3 * sizeof(float)*/, colors, 0); //Initialize the VBO that's active 	
+			break;
+		case 1:	
 			glBufferStorage(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), model.colors, 0); //Initialize the VBO that's active 	
-			//glBufferData(GL_ARRAY_BUFFER, sizeof(cores), vertices, GL_STATIC_DRAW);
+			break;
+		case 2:
+			glBufferStorage(GL_ARRAY_BUFFER, numVertices * 2 * sizeof(float), model.textures, 0); //Initialize the VBO that's active 
+			break;
 		}
 	}
 
@@ -162,13 +168,18 @@ void init() {
 	// Get the Location of Attribute vPosition in Shader Program
 	//GLint Coors_ID = glGetAttribLocation(shaderProgram, "vPosition"); // for versions older than 4.3
 	GLint Coords_ID = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vPosition"); // for versions new or equal to 4.3
+
 	// Get the Location of Attribute vColors in Shader Program
 	//GLint Colors_ID = glGetAttribLocation(ShaderProgram, "vColors"); // for versions older than 4.3
 	GLint Colors_ID = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vColors"); // for versions new or equal to 4.3
 
+	// Get the Location of Attribute vTextureCoors in Shader Program
+	//GLint Colors_ID = glGetAttribLocation(ShaderProgram, "vTextureCoords"); // for versions older than 4.3
+	GLint textureID = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vTextureCoords");
+
 	// put a valor in uniform MVP
 	GLint mvp_ID = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "MVP");
-	glProgramUniformMatrix4fv(ShaderProgram, mvp_ID, 1, GL_FALSE, glm::value_ptr(ModelViewProjection));
+	glProgramUniformMatrix4fv(ShaderProgram, mvp_ID, 1, GL_FALSE, value_ptr(ModelViewProjection));
 
 	//glBindVertexArray(VAOs[0]); // it's not necessary to bind the VAO, as it is already active in opengl context.
 
@@ -176,25 +187,79 @@ void init() {
 	glBindBuffer(GL_ARRAY_BUFFER, Buffers[0]);
 
 	// connects the attribute 'vPosition' from shaders to the active VBO and VAO
-	glVertexAttribPointer(Coords_ID, 3 /*3 elements per vertice*/, GL_FLOAT/*float type*/, GL_FALSE, 0, nullptr);
+	glVertexAttribPointer(Coords_ID, 3 /*3 elements per vertice*/, GL_FLOAT/*float type*/, GL_FALSE, 0, nullptr);	
 
 	// Activate the VBO buffer[1]
 	glBindBuffer(GL_ARRAY_BUFFER, Buffers[1]);
-	//  connects the attribute 'vPosition' from shaders to the active VBO and VAO
+	//  connects the attribute 'vColors' from shaders to the active VBO and VAO
 	glVertexAttribPointer(Colors_ID, 3 /*3 elements per vertice*/, GL_FLOAT/*float type*/, GL_FALSE, 0, nullptr);
+
+	//Activate the VBO buffer[2]
+	glBindBuffer(GL_ARRAY_BUFFER, Buffers[2]);
+	//  connects the attribute 'vTextureCoors' from shaders to the active VBO and VAO
+	glVertexAttribPointer(textureID, 2 /*2 elements per vertice*/, GL_FLOAT/*float type*/, GL_FALSE, 0, nullptr);
+
 
 	glEnableVertexAttribArray(Coords_ID); //Activate the Coordenate Attribute for the active VAO
 
 	glEnableVertexAttribArray(Colors_ID); //Activate the Color Attribute for the Active VAO
 
+	glEnableVertexAttribArray(textureID); //Activate the Texture Attribute for the Active VAO
+	
+	//points the unit of texture to connect to the sampler TexSampler
+	//glUniform1i(glGetUniformLocation(programa, "TexSampler"), 0 /* Texture Unit #0 */);
+	GLint locationTexSampler = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "TexSampler");
+	glProgramUniform1i(ShaderProgram, locationTexSampler, 0 /* Texture Unit #0 */);
+
 	glViewport(0, 0, screenWidth, screenHeight); //Define viewport Window
 
+}
+
+void load_Model_texture(Model model) {
+	GLuint textureName = 0;
+
+	//Generates a name for the Texture
+	glGenTextures(1, &textureName);
+
+	//Activate Texture Unit #0
+	glActiveTexture(GL_TEXTURE0);
+
+	//Assigns that texture name to the target GL_TEXTURE_2D from the active Texture Unit
+	glBindTexture(GL_TEXTURE_2D, textureName);
+
+	//Defines filtering parameters (Wrapping and size adjusting)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	//Reading and unconpressing of the file with the texture Image
+	int width, height, nChannels;
+	//Activates Image vertical flipping
+	stbi_set_flip_vertically_on_load(true);
+	//Loading the Image to the CPU
+
+	//char[20] = model.getTextureFile()
+	unsigned char *imageData = stbi_load("Model/Iron_Man.tga", &width, &height, &nChannels, 0);
+	if (imageData) {
+		//Loads the image data to the assigned texture object of the GL_TEXTURE_2d
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, nChannels == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, imageData);
+
+		//Generate a mipMap for that texture
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		//Unloads the image from CPU Memory
+		stbi_image_free(imageData);
+	}
+	else {
+		cout << "Error loading texture!" << endl;
+	}
 }
 
 void display() {
 	static const float black[] = { 0.0f, 0.0f, 0.0f, 0.0f }; //Black Color
 
-	glPolygonMode(GL_FRONT_AND_BACK, /*GL_FILL */ GL_LINE /*GL_POINT*/);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL  /*GL_LINE*/ /*GL_POINT*/);
 	glEnable(GL_LINE_SMOOTH); //activates antialiasing
 	glLineWidth(0.5f); //defines the line width
 	//glPointSize(5.0f);

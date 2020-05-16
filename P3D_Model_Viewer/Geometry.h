@@ -4,6 +4,7 @@
 #pragma comment(lib, "opengl32.lib")
 
 #include <iostream>
+using namespace std;
 #include <fstream>
 
 #include <iostream>
@@ -18,17 +19,13 @@
 #include <glm\gtc\type_ptr.hpp>
 #include <glm\gtc\matrix_transform.hpp>
 
-#define GLFW_USE_DWM_SWAP_INTERVAL
+#define GLFW_USE_DWM_SWAP_INTERVAL       
 #include <GLFW\glfw3.h>
 
 
-//#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 using namespace glm;
-using namespace std;
-using namespace Model_Viewer;
 
+using namespace Model_Viewer;
 
 	const vec3 DEFAULT_DIR = vec3(1.0f, 1.0f, 0.0f);
 	const vec3 UP = vec3(0.0f, 1.0f, 0.0f);
@@ -44,10 +41,11 @@ using namespace Model_Viewer;
 	Model LoadCube();
 	Model LoadTriangle();
 	Model LoadXYZModel(string fileName);
-	Material getMaterial();
+	Material getMaterial(string file);
 
 	//Source.cpp Functions
 	void init();
+	void load_Model_texture(Model model);
 	void display();
 	void InputManager(GLFWwindow* window, int key, int scancode, int action, int mods);
 	void modsInput(GLFWwindow* window, unsigned int codepoint, int mods);

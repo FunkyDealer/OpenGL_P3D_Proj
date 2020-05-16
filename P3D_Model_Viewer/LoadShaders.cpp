@@ -10,23 +10,23 @@
 
 static const GLchar* ReadShader(const char* filename) {
 	// Abre o ficheiro 'filename' em binario, e coloca-se na setima posicao do ficheiro.
-	std::ifstream ficheiro(filename, std::ifstream::ate | std::ifstream::binary);
+	std::ifstream file(filename, std::ifstream::ate | std::ifstream::binary);
 	// Se o ficheiro foi aberto.
-	if (ficheiro.is_open()) {
+	if (file.is_open()) {
 		// Leitura da próxima posição de leitura.
-		std::streampos tamanhoDoFicheiroEmBytes = ficheiro.tellg();
+		std::streampos FileSizeInBytes = file.tellg();
 		// Reposiciona a leitura do ficheiro no seu inú€io.
-		ficheiro.seekg(0, std::ios::beg);
+		file.seekg(0, std::ios::beg);
 
 		// Alocação de espaço de memória para dados do ficheiro.
-		GLchar* source = new GLchar[int(tamanhoDoFicheiroEmBytes) + 1];
+		GLchar* source = new GLchar[int(FileSizeInBytes) + 1];
 		// Leitura do ficheiro para o array 'source'.
-		ficheiro.read(source, tamanhoDoFicheiroEmBytes);
+		file.read(source, FileSizeInBytes);
 		// Fecha a string.
-		source[tamanhoDoFicheiroEmBytes] = 0;
+		source[FileSizeInBytes] = 0;
 
 		// Fecha o ficheiro.
-		ficheiro.close();
+		file.close();
 
 		// Retorna o endereço da string alocada.
 		return const_cast<const GLchar*>(source);

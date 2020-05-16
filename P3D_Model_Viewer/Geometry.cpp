@@ -1,7 +1,11 @@
 #include "Geometry.h"
 
+#ifndef STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#endif
+#include "stb_image.h"
 
-Model LoadCube() {
+Model LoadCube() { //Generates  Cube
 	Model model;
 	model.modelTotalVertices = 6 * 6;
 	
@@ -286,17 +290,129 @@ Model LoadXYZModel(string fileName)
 
 	model.colors = verticesColors;
 
-	model.material = getMaterial();
+	model.material = getMaterial(model.getMaterialFile());
 	
 
 	return model;
 }
 
-Material getMaterial() {
+Material getMaterial(string file) {
 	Material material;
 
-	//Todo
+	material.name = file;
+	string mat = "test";
+	string MAP = "";
+	vector<GLfloat> matKA[3], matKS[3], matKD[3];
+	GLfloat X = 0, Y = 0, Z = 0, // ka
+		XI = 0, YI = 0, ZI = 0, // kd
+		XS = 0, YS = 0, ZS = 0, // ks
+		NS = 0, NI = 0;
 
+	ifstream fileMat("Model/" + file);
+
+	if (fileMat.is_open())
+	{
+		string line;
+
+		fileMat >> line;
+		if (line.compare("newmtl") == 0)
+		{
+			fileMat >> mat;
+			cout << "mat " << mat << endl;
+		}
+
+		while (getline(fileMat, line))
+		{
+			fileMat >> line;
+
+			if (line.compare("newmtl") == 0)
+			{
+				fileMat >> mat;
+				cout << "found mat " << mat << endl;
+			}
+			else if (line == "Ka")
+			{
+				fileMat >> X >> Y >> Z;
+
+				matKA[0].push_back(X);
+				matKA[1].push_back(Y);
+				matKA[2].push_back(Z);
+
+			}
+			else if (line == "Kd")
+			{
+				fileMat >> XI >> YI >> ZI;
+
+				matKD[0].push_back(XI);
+				matKD[1].push_back(YI);
+				matKD[2].push_back(ZI);
+			}
+			else if (line == "Ks")
+			{
+				fileMat >> XS >> YS >> ZS;
+
+				matKS[0].push_back(XS);
+				matKS[1].push_back(YS);
+				matKS[2].push_back(ZS);
+			}
+			else if (line == "Ns")
+			{
+				fileMat >> NS;
+				material.Ns = &NS;
+			}
+			else if (line == "Ni")
+			{
+				fileMat >> NI;
+				material.Ni = &NI;
+			}
+			else if (line.compare("map") == 0)
+			{
+				fileMat >> MAP;
+				material.map = MAP;
+
+				cout << "found map: " << MAP << endl;
+			}
+
+
+		}
+		fileMat.close();
+	}
+	else
+	{
+		cout << "ERROR, FILE NOT FOUND" << endl;
+		throw;
+	}
+
+
+	GLfloat* kaCoords = (GLfloat*)malloc(3 * 3 * sizeof(GLfloat)); //ka
+	int currentV = 0;
+
+	for (int n = 0; n < 3; n++)
+	{
+		kaCoords[currentV] = matKA[n].at(0);
+		currentV++;
+	}
+
+	material.ka = kaCoords;
+
+	GLfloat* kdCoords = (GLfloat*)malloc(3 * 3 * sizeof(GLfloat)); //kd
+	currentV = 0;
+
+	for (int n = 0; n < 3; n++)
+	{
+		kdCoords[currentV] = matKD[n].at(0);
+		currentV++;
+	}
+	material.kd = kdCoords;
+	GLfloat* ksCoords = (GLfloat*)malloc(3 * 3 * sizeof(GLfloat)); //ks
+	currentV = 0;
+
+	for (int n = 0; n < 3; n++)
+	{
+		ksCoords[currentV] = matKS[n].at(0);
+		currentV++;
+	}
+	material.ks = ksCoords;
 
 	return material;
 }
