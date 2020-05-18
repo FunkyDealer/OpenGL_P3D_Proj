@@ -83,6 +83,7 @@ int main() {
 
 	while (!glfwWindowShouldClose(window)) { //Indica pedido de fecho glfwSetWindowShouldClose(window, 1); //Pede para fechar
 
+
 		display();
 
 		glfwSwapBuffers(window); //Buffers
@@ -266,13 +267,20 @@ void load_Model_texture(Model model) {
 void display() {
 	static const float black[] = { 0.0f, 0.0f, 0.0f, 0.0f }; //Black Color
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL  /*GL_LINE*/ /*GL_POINT*/);
-	glEnable(GL_LINE_SMOOTH); //activates antialiasing
-	glLineWidth(0.5f); //defines the line width
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL  /*GL_LINE*/ /*GL_POINT*/);
+	//glEnable(GL_LINE_SMOOTH); //activates antialiasing
+	//glLineWidth(0.5f); //defines the line width
 	//glPointSize(5.0f);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_BLEND); // Para que o GL_LINE_SMOOTH tenha efeito
-	//glEnable(GL_CULL_FACE);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glEnable(GL_BLEND); // Para que o GL_LINE_SMOOTH tenha efeito
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glEnable(GL_DEPTH_TEST);
+
+	float color[4] = { 0,0,0,0 };
+
+	glClearBufferfv(GL_COLOR, 0, color);
+	glClear(GL_DEPTH_BUFFER_BIT);
 
 	glClearBufferfv(GL_COLOR, 0, black); //Clears screen all black
 
