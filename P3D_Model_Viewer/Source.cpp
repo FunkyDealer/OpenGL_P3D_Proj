@@ -2,6 +2,7 @@
 #include "LoadShaders.h"
 
 #include "stb_image.h"
+#include <glm\gtc\matrix_inverse.hpp> // glm::inverseTranspose()
 
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
@@ -14,13 +15,14 @@ char title[20] = "Model Viewer";
 
 //VAOS && VBOs
 #define NumVAOs 1
-#define NumBuffers 3 // Vertices, Cores, Textures
+#define NumBuffers 4 // Vertices, Cores, Textures
 GLuint VAOs[NumVAOs];
 GLuint Buffers[NumBuffers];
 
 GLuint ShaderProgram;
 
 mat4 LocalWorld, View, Projection;
+mat3 NormalMatrix;  //Normal Matrix For Light
 
 GLfloat zoom = 10.0f;
 GLfloat targetHeight = 0.0f;
@@ -82,7 +84,7 @@ int main() {
 	mat4 LocalWorld = mat4(1.0f); //Model World //identity matrix
 
 	while (!glfwWindowShouldClose(window)) { //Indica pedido de fecho glfwSetWindowShouldClose(window, 1); //Pede para fechar
-
+		
 
 		display();
 
@@ -100,7 +102,7 @@ int main() {
 
 void init() {
 	//--------------------------- Create arrays in RAM ---------------------------
-	Model model;
+	Model model; //Model To be Rendered
 
 	switch (geometry) {
 	case 1: //Triangle
@@ -121,7 +123,6 @@ void init() {
 		break;
 	}
 	
-
 	cout << "Ended Model Creation" << endl;
 
 	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane);
@@ -133,6 +134,9 @@ void init() {
 	);
 
 	LocalWorld = IDENTITY;
+	mat4 ModelView = View * LocalWorld;
+	NormalMatrix = inverseTranspose(mat3(ModelView));
+
 	mat4 ModelViewProjection = Projection * View * LocalWorld;
 
 	// --------------------------- VAOs - Vertex Array Objects ---------------------------
@@ -155,21 +159,26 @@ void init() {
 		case 2:
 			glBufferStorage(GL_ARRAY_BUFFER, numVertices * 2 * sizeof(float), model.textures, 0); //Initialize the VBO that's active 
 			break;
+		case 3:
+			glBufferStorage(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), model.normals, 0); //Initialize the VBO that's active 
 		}
-	}
+	}	
 
 	//---------------------- Shaders ---------------------------
 	ShaderInfo  shaders[] = {
-		{ GL_VERTEX_SHADER,   "triangles.vert" },
-		{ GL_FRAGMENT_SHADER, "triangles.frag" },
+		{ GL_VERTEX_SHADER,   "Shader.vert" },
+		{ GL_FRAGMENT_SHADER, "Shader.frag" },
 		{ GL_NONE, NULL }
-	};
+	};	
+
+	
 
 	ShaderProgram = LoadShaders(shaders);
 	if (!ShaderProgram) exit(EXIT_FAILURE);
-	glUseProgram(ShaderProgram);
+	glUseProgram(ShaderProgram);	
 
 	// --------------------------- Connect Atributtes to Shaders ---------------------------
+	
 
 	// Get the Location of Attribute vPosition in Shader Program
 	//GLint Coors_ID = glGetAttribLocation(shaderProgram, "vPosition"); // for versions older than 4.3
@@ -177,15 +186,20 @@ void init() {
 
 	// Get the Location of Attribute vColors in Shader Program
 	//GLint Colors_ID = glGetAttribLocation(ShaderProgram, "vColors"); // for versions older than 4.3
-	GLint Colors_ID = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vColors"); // for versions new or equal to 4.3
+	 GLint Colors_ID = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vColors"); // for versions new or equal to 4.3
 
 	// Get the Location of Attribute vTextureCoors in Shader Program
 	//GLint Colors_ID = glGetAttribLocation(ShaderProgram, "vTextureCoords"); // for versions older than 4.3
 	GLint textureID = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vTextureCoords");
 
+	//Get the Location of the vNormal in the Shader Program
+	GLint normalId = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vNormal");
+	
+
+
 	// put a valor in uniform MVP
-	GLint mvp_ID = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "MVP");
-	glProgramUniformMatrix4fv(ShaderProgram, mvp_ID, 1, GL_FALSE, value_ptr(ModelViewProjection));
+	//GLint mvp_ID = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "MVP");
+	//glProgramUniformMatrix4fv(ShaderProgram, mvp_ID, 1, GL_FALSE, value_ptr(ModelViewProjection));
 
 	//glBindVertexArray(VAOs[0]); // it's not necessary to bind the VAO, as it is already active in opengl context.
 
@@ -205,20 +219,159 @@ void init() {
 	//  connects the attribute 'vTextureCoors' from shaders to the active VBO and VAO
 	glVertexAttribPointer(textureID, 2 /*2 elements per vertice*/, GL_FLOAT/*float type*/, GL_FALSE, 0, nullptr);
 
+	//Activate the VBO buffer[2]
+	glBindBuffer(GL_ARRAY_BUFFER, Buffers[3]);
+	//  connects the attribute 'vNormal' from shaders to the active VBO and VAO
+	glVertexAttribPointer(normalId, 2 /*2 elements per vertice*/, GL_FLOAT/*float type*/, GL_FALSE, 0, nullptr);
+
 
 	glEnableVertexAttribArray(Coords_ID); //Activate the Coordenate Attribute for the active VAO
 
 	glEnableVertexAttribArray(Colors_ID); //Activate the Color Attribute for the Active VAO
 
 	glEnableVertexAttribArray(textureID); //Activate the Texture Attribute for the Active VAO
+
+	glEnableVertexAttribArray(normalId); //Activate the Normal Attribute for the Active VAO
 	
+
+
 	//points the unit of texture to connect to the sampler TexSampler
-	//glUniform1i(glGetUniformLocation(programa, "TexSampler"), 0 /* Texture Unit #0 */);
 	GLint locationTexSampler = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "TexSampler");
 	glProgramUniform1i(ShaderProgram, locationTexSampler, 0 /* Texture Unit #0 */);
 
-	glViewport(0, 0, screenWidth, screenHeight); //Define viewport Window
+	// ****************************************************
+	// Uniforms
+	// ****************************************************	
+	
+	// Atribui valor ao uniform Model
+	GLint modelId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "Model");
+	glProgramUniformMatrix4fv(ShaderProgram, modelId, 1, GL_FALSE, glm::value_ptr(LocalWorld));
+	// Atribui valor ao uniform View
+	GLint viewId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "View");
+	glProgramUniformMatrix4fv(ShaderProgram, viewId, 1, GL_FALSE, glm::value_ptr(View));
+	// Atribui valor ao uniform ModelView
+	GLint modelViewId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ModelView");
+	glProgramUniformMatrix4fv(ShaderProgram, modelViewId, 1, GL_FALSE, glm::value_ptr(ModelView));
+	// Atribui valor ao uniform Projection
+	GLint projectionId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "Projection");
+	glProgramUniformMatrix4fv(ShaderProgram, projectionId, 1, GL_FALSE, glm::value_ptr(Projection));
+	// Atribui valor ao uniform NormalMatrix
+	GLint normalViewId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "NormalMatrix");
+	glProgramUniformMatrix3fv(ShaderProgram, normalViewId, 1, GL_FALSE, glm::value_ptr(NormalMatrix));
 
+	// Fonte de luz ambiente global
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ambientLight.ambient"), 1, value_ptr(vec3(0.1, 0.1, 0.1)));
+
+	// Fonte de luz direcional
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalLight.direction"), 1, value_ptr(vec3(1.0, 0.0, 0.0)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalLight.ambient"), 1, value_ptr(vec3(0.2, 0.2, 0.2)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalLight.diffuse"), 1, value_ptr(vec3(1.0, 1.0, 1.0)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalLight.specular"), 1, value_ptr(vec3(1.0, 1.0, 1.0)));
+
+	//// Fonte de luz pontual #1
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[0].position"), 1, value_ptr(vec3(0.0, 0.0, 5.0)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[0].ambient"), 1, value_ptr(vec3(0.1, 0.1, 0.1)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[0].diffuse"), 1, value_ptr(vec3(1.0, 1.0, 1.0)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[0].specular"), 1, value_ptr(vec3(1.0, 1.0, 1.0)));
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[0].constant"), 1.0f);
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[0].linear"), 0.06f);
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[0].quadratic"), 0.02f);
+
+	//// Fonte de luz pontual #2
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[1].position"), 1, value_ptr(vec3(-2.0, 2.0, 5.0)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[1].ambient"), 1, value_ptr(vec3(0.1, 0.1, 0.1)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[1].diffuse"), 1, value_ptr(vec3(1.0, 1.0, 1.0)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[1].specular"), 1, value_ptr(vec3(1.0, 1.0, 1.0)));
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[1].constant"), 1.0f);
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[1].linear"), 0.06f);
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[1].quadratic"), 0.02f);
+
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.emissive"), 1, value_ptr(vec3(0.0, 0.0, 0.0)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.ambient"), 1, value_ptr(model.material.ambient));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.diffuse"), 1, value_ptr(model.material.difuse));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.specular"), 1, value_ptr(model.material.specular));
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.shininess"), model.material.specular_Exponent);
+
+	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.emissive"), 1, glm::value_ptr(glm::vec3(0.0, 0.0, 0.0)));
+	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.ambient"), 1, glm::value_ptr(glm::vec3(1.0, 1.0, 1.0)));
+	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.diffuse"), 1, glm::value_ptr(glm::vec3(1.0, 1.0, 1.0)));
+	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.specular"), 1, glm::value_ptr(glm::vec3(1.0, 1.0, 1.0)));
+	//glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.shininess"), 12.0f);		
+
+	glViewport(0, 0, screenWidth, screenHeight); //Define viewport Window
+	
+}
+
+void display() {
+	static const float black[] = { 0.0f, 0.0f, 0.0f, 0.0f }; //Black Color
+	static const float white[] = { 1.0f, 1.0f, 1.0f, 1.0f }; //White Color
+	static const float grey[] = { 0.4f, 0.4f, 0.4f, 1.0f }; //Grey Color
+
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL  /*GL_LINE*/ /*GL_POINT*/);
+	//glEnable(GL_LINE_SMOOTH); //activates antialiasing
+	//glLineWidth(0.5f); //defines the line width
+	//glPointSize(5.0f);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glEnable(GL_BLEND); // Para que o GL_LINE_SMOOTH tenha efeito
+	//glEnable(GL_CULL_FACE);
+	//glCullFace(GL_BACK);
+	glEnable(GL_DEPTH_TEST);
+
+	float color[4] = { 0,0,0,0 };
+
+	glClearBufferfv(GL_COLOR, 0, color);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	glClearBufferfv(GL_COLOR, 0, grey); //Clears screen all black
+
+	// Update Uniform data
+
+	//Update Camera  Data
+	camLocation = vec3(0.0f, camHeight, zoom);
+	camTarget = vec3(0.0f, targetHeight, 0.0f);
+	camDirection = camTarget - camLocation;
+
+	//View Matrix - Camera
+	View = lookAt(
+		camLocation,	// Camera Position in the World
+		camDirection,	// Direction at which the camera Is Pointing
+		UP		// Camera Up Vector
+	);
+
+	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane); //Projection Matrix
+
+	if (isRotating) LocalWorld = rotate(IDENTITY, ANGLE += rotateSpeed, normalize(UP)); //Rotate Model Automatically
+
+	mat4 ModelView = View * LocalWorld;
+
+	mat4 ModelViewProjection = Projection * View * LocalWorld;
+
+	NormalMatrix = inverseTranspose(mat3(ModelView));
+
+	//GLint mvp_ID = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "MVP");
+	//glProgramUniformMatrix4fv(ShaderProgram, mvp_ID, 1, GL_FALSE, glm::value_ptr(ModelViewProjection));
+	
+	// Attributes value to the uniform model
+	GLint modelId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "Model");
+	glProgramUniformMatrix4fv(ShaderProgram, modelId, 1, GL_FALSE, value_ptr(LocalWorld));
+
+	GLint viewId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "View");
+	glProgramUniformMatrix4fv(ShaderProgram, viewId, 1, GL_FALSE, value_ptr(View));
+
+	GLint modelViewId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ModelView");
+	glProgramUniformMatrix4fv(ShaderProgram, modelViewId, 1, GL_FALSE, value_ptr(ModelView));
+	
+	GLint normalViewId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "NormalMatrix");
+	glProgramUniformMatrix3fv(ShaderProgram, normalViewId, 1, GL_FALSE, value_ptr(NormalMatrix));	
+
+	GLint projectionId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "Projection");
+	glProgramUniformMatrix4fv(ShaderProgram, projectionId, 1, GL_FALSE, glm::value_ptr(Projection));
+
+	// Activates the VAOs
+	glBindVertexArray(VAOs[0]);
+
+	//Draws Primitives GL_TRIANGLES using active VAOs
+	glDrawArrays(GL_TRIANGLES, 0, numVertices);	
 }
 
 void load_Model_texture(Model model) {
@@ -248,7 +401,7 @@ void load_Model_texture(Model model) {
 	string textureFile = model.material.map; //Gets the texture file from the model's material
 	const char *cstr = textureFile.c_str(); //Converts the string to a constant char
 
-	unsigned char *imageData = stbi_load( cstr, &width, &height, &nChannels, 0);
+	unsigned char *imageData = stbi_load(cstr, &width, &height, &nChannels, 0);
 	if (imageData) {
 		//Loads the image data to the assigned texture object of the GL_TEXTURE_2d
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, nChannels == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, imageData);
@@ -262,56 +415,6 @@ void load_Model_texture(Model model) {
 	else {
 		cout << "Error loading texture!" << endl;
 	}
-}
-
-void display() {
-	static const float black[] = { 0.0f, 0.0f, 0.0f, 0.0f }; //Black Color
-
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL  /*GL_LINE*/ /*GL_POINT*/);
-	//glEnable(GL_LINE_SMOOTH); //activates antialiasing
-	//glLineWidth(0.5f); //defines the line width
-	//glPointSize(5.0f);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	//glEnable(GL_BLEND); // Para que o GL_LINE_SMOOTH tenha efeito
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	glEnable(GL_DEPTH_TEST);
-
-	float color[4] = { 0,0,0,0 };
-
-	glClearBufferfv(GL_COLOR, 0, color);
-	glClear(GL_DEPTH_BUFFER_BIT);
-
-	glClearBufferfv(GL_COLOR, 0, black); //Clears screen all black
-
-	// Update Uniform data
-
-	//Update Camera  Data
-	camLocation = vec3(0.0f, camHeight, zoom);
-	camTarget = vec3(0.0f, targetHeight, 0.0f);
-	camDirection = camTarget - camLocation;
-
-	//View Matrix
-	View = lookAt(
-		camLocation,	// Camera Position in the World
-		camDirection,	// Direction at which the camera Is Pointing
-		UP		// Camera Up Vector
-	);
-
-	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane); //Projection Matrix
-
-	if (isRotating) LocalWorld = rotate(IDENTITY, ANGLE += rotateSpeed, normalize(UP)); //Rotate Model Automatically
-
-	mat4 ModelViewProjection = Projection * View * LocalWorld;
-
-	GLint mvp_ID = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "MVP");
-	glProgramUniformMatrix4fv(ShaderProgram, mvp_ID, 1, GL_FALSE, glm::value_ptr(ModelViewProjection));
-
-	// Activates the VAOs
-	glBindVertexArray(VAOs[0]);
-
-	//Draws Primitives GL_TRIANGLES using active VAOs
-	glDrawArrays(GL_TRIANGLES, 0, numVertices);
 }
 
 

@@ -132,8 +132,8 @@
   <ItemGroup>
     <None Include="B:\github\OpenGL_P3D_Proj\P3D_Model_Viewer\Model\Iron_Man.mtl" />
     <None Include="B:\github\OpenGL_P3D_Proj\P3D_Model_Viewer\Model\Iron_Man.xyz" />
-    <None Include="triangles.frag" />
-    <None Include="triangles.vert" />
+    <None Include="Shader.frag" />
+    <None Include="Shader.vert" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="B:\github\OpenGL_P3D_Proj\P3D_Model_Viewer\Model\Iron_Man.tga" />

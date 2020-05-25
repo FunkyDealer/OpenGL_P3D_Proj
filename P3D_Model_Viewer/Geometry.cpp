@@ -296,7 +296,7 @@ Material getMaterial(string file) {
 	material.name = file;
 	string mat = "test";
 	string MAP = "";
-	vector<GLfloat> matKA[3], matKS[3], matKD[3];
+	float matKA[3], matKS[3], matKD[3];
 	GLfloat X = 0, Y = 0, Z = 0, // ka
 		XI = 0, YI = 0, ZI = 0, // kd
 		XS = 0, YS = 0, ZS = 0, // ks
@@ -328,43 +328,40 @@ Material getMaterial(string file) {
 			{
 				fileMat >> X >> Y >> Z;
 
-				matKA[0].push_back(X);
-				matKA[1].push_back(Y);
-				matKA[2].push_back(Z);
+				matKA[0] = X;
+				matKA[1] = Y;
+				matKA[2] = Z;
 			}
 			else if (line == "Kd")
 			{
 				fileMat >> XI >> YI >> ZI;
 
-				matKD[0].push_back(XI);
-				matKD[1].push_back(YI);
-				matKD[2].push_back(ZI);
+				matKD[0] = XI;
+				matKD[1] = YI;
+				matKD[2] = ZI;
 			}
 			else if (line == "Ks")
 			{
 				fileMat >> XS >> YS >> ZS;
 
-				matKS[0].push_back(XS);
-				matKS[1].push_back(YS);
-				matKS[2].push_back(ZS);
+				matKS[0] = XS;
+				matKS[1] = YS;
+				matKS[2] = ZS;
 			}
 			else if (line == "Ns")
 			{
 				fileMat >> NS;
-				material.Ns = &NS;
+				
 			}
 			else if (line == "Ni")
 			{
-				fileMat >> NI;
-				material.Ni = &NI;
+				fileMat >> NI;				
 			}
 			else if (line.compare("map") == 0)
 			{
 				fileMat >> MAP;
-				material.map = "Model/";
-				material.map.append(MAP);
 
-				cout << "found map: " << material.map << endl;
+				cout << "found map: " << MAP << endl;
 			}
 		}
 		fileMat.close();
@@ -374,35 +371,49 @@ Material getMaterial(string file) {
 		cout << "ERROR, FILE NOT FOUND" << endl;
 		throw;
 	}
-	GLfloat* kaCoords = (GLfloat*)malloc(3 * 3 * sizeof(GLfloat)); //ka
-	int currentV = 0;
+	material.specular_Exponent = NS;
 
-	for (int n = 0; n < 3; n++)
-	{
-		kaCoords[currentV] = matKA[n].at(0);
-		currentV++;
-	}
+	material.Refraction = NI;
 
-	material.ka = kaCoords;
+	material.map = "Model/";
+	material.map.append(MAP);
 
-	GLfloat* kdCoords = (GLfloat*)malloc(3 * 3 * sizeof(GLfloat)); //kd
-	currentV = 0;
+	//vec3* kaCoords = (vec3*)malloc(1 * sizeof(vec3)); //ka
+	//int currentV = 0;
 
-	for (int n = 0; n < 3; n++)
-	{
-		kdCoords[currentV] = matKD[n].at(0);
-		currentV++;
-	}
-	material.kd = kdCoords;
-	GLfloat* ksCoords = (GLfloat*)malloc(3 * 3 * sizeof(GLfloat)); //ks
-	currentV = 0;
+	vec3 kaCoords = vec3(matKA[0], matKA[1], matKA[2]);
 
-	for (int n = 0; n < 3; n++)
-	{
-		ksCoords[currentV] = matKS[n].at(0);
-		currentV++;
-	}
-	material.ks = ksCoords;
+	//for (int n = 0; n < 3; n++)
+	//{
+	//	kaCoords[currentV] = matKA[n].at(0);
+	//	currentV++;
+	//}
+
+	material.ambient = kaCoords;
+
+	//vec3* kdCoords = (vec3*)malloc(sizeof(vec3)); //kd
+	//currentV = 0;
+
+	vec3 kdCoords = vec3(matKD[0], matKD[1], matKD[2]);
+
+	//for (int n = 0; n < 3; n++)
+	//{
+	//	kdCoords[currentV] = matKD[n].at(0);
+	//	currentV++;
+	//}
+	material.difuse = kdCoords;
+
+	//vec3* ksCoords = (vec3*)malloc(sizeof(vec3)); //ks
+	//currentV = 0;
+
+	vec3 ksCoords = vec3(matKS[0], matKS[1], matKS[2]);
+
+	//for (int n = 0; n < 3; n++)
+	//{
+	//	ksCoords[currentV] = matKS[n].at(0);
+	//	currentV++;
+	//}
+	material.specular = ksCoords;
 
 	return material;
 }

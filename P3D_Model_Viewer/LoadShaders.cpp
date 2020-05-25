@@ -33,6 +33,7 @@ static const GLchar* ReadShader(const char* filename) {
 	}
 	else {
 		std::cerr << "Error While Opening File '" << filename << "'" << std::endl;
+		std::cin.get();
 	}
 
 	return nullptr;
@@ -82,6 +83,7 @@ GLuint LoadShaders(ShaderInfo* shaders) {
 			GLchar* log = new GLchar[len + 1];
 			glGetShaderInfoLog(shaders[i].shader, len, &len, log);
 			std::cerr << "Shader compilation failed: " << log << std::endl;
+			std::cin.get();
 			delete[] log;
 #endif /* DEBUG */
 
@@ -115,6 +117,7 @@ GLuint LoadShaders(ShaderInfo* shaders) {
 		GLchar* log = new GLchar[len + 1];
 		glGetProgramInfoLog(program, len, &len, log);
 		std::cerr << "Shader linking failed: " << log << std::endl;
+		std::cin.get();
 		delete[] log;
 #endif /* DEBUG */
 

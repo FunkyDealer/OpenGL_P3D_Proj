@@ -1,20 +1,22 @@
 #pragma once
 #include <GL\glew.h>
 #include <GL\gl.h>
+#include <glm\glm.hpp>
 #include <string>
 using namespace std;
+using namespace glm;
 
 namespace Model_Viewer {
 
-	typedef struct {
+	 struct Material {
 		string name; //material name
-		GLfloat *ka;
-		GLfloat *kd;
-		GLfloat *ks;
-		GLfloat *Ns;
-		GLfloat *Ni;
+		vec3 ambient; //ka
+		vec3 difuse; //kd
+		vec3 specular; //ks
+		GLfloat specular_Exponent; //Ns
+		GLfloat Refraction; //ni
 		string map; //Texture name
-	} Material;
+	 };
 
 	class Model {
 

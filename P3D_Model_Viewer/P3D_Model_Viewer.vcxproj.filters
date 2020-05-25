@@ -51,17 +51,17 @@
     </Library>
   </ItemGroup>
   <ItemGroup>
-    <None Include="triangles.frag">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="triangles.vert">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="B:\github\OpenGL_P3D_Proj\P3D_Model_Viewer\Model\Iron_Man.mtl">
       <Filter>Resource Files\Model</Filter>
     </None>
     <None Include="B:\github\OpenGL_P3D_Proj\P3D_Model_Viewer\Model\Iron_Man.xyz">
       <Filter>Resource Files\Model</Filter>
+    </None>
+    <None Include="Shader.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Shader.vert">
+      <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
