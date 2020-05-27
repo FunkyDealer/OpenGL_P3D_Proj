@@ -50,8 +50,8 @@ struct SpotLight {
 	float linear;		// linear atenuation coeficient
 	float quadratic;	// quadratic atenuation coeficient
 
-	float spotCutoff, spotExponent;
-	vec3 spotDirection;
+	float spotCutoffAngle, spotExponent;
+	vec3 direction;
 };
 
 uniform SpotLight spotLight; // Conic Light Source
@@ -70,8 +70,8 @@ in vec3 vPositionEyeSpace;
 in vec3 vNormalEyeSpace;
 in vec3 textureVector;
 
- in vec3 color; //Vertice Color
- in vec2 textureCoord;	 //Texture Coordinate
+in vec3 color; //Vertice Color
+in vec2 textureCoord;	 //Texture Coordinate
 
  uniform sampler2D TexSampler;
 
@@ -86,7 +86,14 @@ uniform mat4 ModelView;		// View * Model
 vec4 calcAmbientLight(AmbientLight light);
 vec4 calcDirectionalLight(DirectionalLight light);
 vec4 calcPointLight(PointLight light);
-//vec4 calcSpotLight(SpotLight light);
+vec4 calcSpotLight(SpotLight light);
+vec4 computeDiffuse(vec4 lightPosition, vec4 lightDiffuse);
+
+uniform int ambientSwitch;
+uniform int directionalSwitch;
+uniform int pointSwitch;
+uniform int coneSwitch;
+
 
 void main()
 {
@@ -95,15 +102,20 @@ void main()
 
 	// calculates the effect of illumination on the fragment
 	vec4 light[5];
-	// Ambient Light from source
-	light[0] = calcAmbientLight(ambientLight);
-	// Directional Light from source
-	light[1] = calcDirectionalLight(directionalLight);
-	//  point Light Light from source
-	for(int i=0; i<2; i++)
-		light[i+2] = calcPointLight(pointLight[i]);
-	// cone Light from source
-	light[4] = /**/vec4(0.0)/**/;
+
+	 for(int i = 0; i < 5; i++) light[i] = vec4(0,0,0,1); //Initiate Lights at 0
+	
+	// Ambient Light source
+	if (ambientSwitch == 1) light[0] = calcAmbientLight(ambientLight);
+	
+	// Directional Light source
+	if (directionalSwitch == 1) light[1] = calcDirectionalLight(directionalLight);
+	
+	//  point Light Light source
+	if (pointSwitch == 1) for(int i=0; i<2; i++) light[i+2] = calcPointLight(pointLight[i]);		
+	
+	// cone Light source
+	 if (coneSwitch == 1) light[4] = calcSpotLight(spotLight);
 
 	//  Computes fragment final Color
 	// With CubeMap
@@ -145,7 +157,7 @@ vec4 calcPointLight(PointLight light) {
 	//Computes the reflection of the ambient light  component
 	vec4 ambient = vec4(material.ambient * light.ambient, 1.0);
 
-	//Computes the reflection of the difuse light component
+		//Computes the reflection of the difuse light component
 	//vec3 lightPositionEyeSpace = mat3(View) * light.position;
 	vec3 lightPositionEyeSpace = (View * vec4(light.position, 1.0)).xyz;
 	vec3 L = normalize(lightPositionEyeSpace - vPositionEyeSpace);
@@ -169,5 +181,62 @@ vec4 calcPointLight(PointLight light) {
 	return (attenuation * (ambient + diffuse + specular));
 }
 
-//vec4 calcSpotLight(SpotLight light) {}
+vec4 calcSpotLight(SpotLight light) {
+	//Computes the reflection of the ambient light  component
+	vec4 ambient = vec4(material.ambient * light.ambient, 1.0);
+
+	//Computes the reflection of the difuse light component
+	//vec3 lightPositionEyeSpace = mat3(View) * light.position;
+	vec3 lightPositionEyeSpace = (View * vec4(light.position, 1.0)).xyz;
+	vec3 lightDirectionEyeSpace = (View * vec4(light.direction, 0.0)).xyz;
+	vec3 L = normalize(-lightDirectionEyeSpace);
+	vec3 N = normalize(vNormalEyeSpace);
+	float NdotL = max(dot(N, L), 0.0);
+	vec4 diffuse = vec4(material.diffuse * light.diffuse, 1.0) * NdotL;
+
+	//computes the reflexion of the specular light component
+	vec3 V = normalize(-vPositionEyeSpace);
+	//vec4 H = normalize(L + V);	//Blinn-Phong Model
+	vec3 R = reflect(-L, N);
+	float RdotV = max(dot(R, V), 0.0);
+	//float NdotH = max(dot(N, H), 0.0);	//Blinn-Phong Model
+	vec4 specular = pow(RdotV, material.shininess) * vec4(light.specular * material.specular, 1.0);
+	
+	// attenuation
+	float dist = length(mat3(View) * light.position - vPositionEyeSpace); //Computes the distance between a light point and a vertex
+	float attenuation = 1.0 / (light.constant + light.linear * dist + light.quadratic * (dist * dist));
+
+	//Compute distance between surface and Light Position
+	vec3 VP = vec3(light.position - vPositionEyeSpace); 
+	VP = normalize(VP);
+
+	float spotDot = dot(-VP, normalize(light.direction));
+	
+	 float spotAttenuation;  // spotlight attenuation factor
+
+	if (spotDot < light.spotCutoffAngle)
+	spotAttenuation = 0,0; //Light adds no contribution
+	else 
+	spotAttenuation = pow(spotDot, light.spotExponent);
+
+	attenuation *= spotAttenuation;
+
+	 vec3  halfVector = normalize(VP + vPositionEyeSpace); // direction of maximum highlights
+
+	 float nDotVP = max(0.0 , dot(N, VP));      // normal . light direction
+     float nDotHV = max(0.0, dot(N, halfVector));      // normal . light half vector
+
+	 float pf;  // power factor
+	 if (nDotVP == 0.0) pf =0.0;
+	 else pf = pow(nDotHV, material.shininess);
+
+
+	//Computes the point light contribution for the final color of the fragment
+	vec4 rValue = (attenuation * (ambient + diffuse * nDotVP + specular * pf));
+	
+
+	return rValue;
+
+//return vec4(0.0);
+}
 

@@ -49,8 +49,9 @@ void main()
 	vNormalEyeSpace = normalize(NormalMatrix * vNormal);
 
 	// texture Coordinate for the Cubermap
-	textureVector = vPosition;
+	textureVector = vPosition;	
 
 	// Vertex final Position (in Clip Coordenates)
 	gl_Position = Projection * ModelView * vec4(vPosition, 1.0f);
+
 }

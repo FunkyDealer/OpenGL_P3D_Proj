@@ -222,7 +222,7 @@ void init() {
 	//Activate the VBO buffer[2]
 	glBindBuffer(GL_ARRAY_BUFFER, Buffers[3]);
 	//  connects the attribute 'vNormal' from shaders to the active VBO and VAO
-	glVertexAttribPointer(normalId, 2 /*2 elements per vertice*/, GL_FLOAT/*float type*/, GL_FALSE, 0, nullptr);
+	glVertexAttribPointer(normalId, 3 /*3 elements per vertice*/, GL_FLOAT/*float type*/, GL_FALSE, 0, nullptr);
 
 
 	glEnableVertexAttribArray(Coords_ID); //Activate the Coordenate Attribute for the active VAO
@@ -260,7 +260,7 @@ void init() {
 	glProgramUniformMatrix3fv(ShaderProgram, normalViewId, 1, GL_FALSE, glm::value_ptr(NormalMatrix));
 
 	// Fonte de luz ambiente global
-	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ambientLight.ambient"), 1, value_ptr(vec3(0.1, 0.1, 0.1)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ambientLight.ambient"), 1, value_ptr(vec3(0.4, 0.4, 0.4)));
 
 	// Fonte de luz direcional
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalLight.direction"), 1, value_ptr(vec3(1.0, 0.0, 0.0)));
@@ -286,11 +286,31 @@ void init() {
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[1].linear"), 0.06f);
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[1].quadratic"), 0.02f);
 
+	//// Fonte de luz Conica
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLightt.position"), 1, value_ptr(vec3(-2.0, 2.0, 5.0)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLightt.direction"), 1, value_ptr(vec3(0.2, 0.2, 0.2)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.ambient"), 1, value_ptr(vec3(0.1, 0.1, 0.1)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.diffuse"), 1, value_ptr(vec3(1.0, 1.0, 1.0)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.specular"), 1, value_ptr(vec3(1.0, 1.0, 1.0)));
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.constant"), 1.0f);
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.linear"), 0.06f);
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.quadratic"), 0.02f);
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr(vec3(1.0, 0.0, 0.0)));
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotCutoffAngle"), 0.0f);
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotExponent"), 1.0f);
+
+	//Material
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.emissive"), 1, value_ptr(vec3(0.0, 0.0, 0.0)));
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.ambient"), 1, value_ptr(model.material.ambient));
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.diffuse"), 1, value_ptr(model.material.difuse));
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.specular"), 1, value_ptr(model.material.specular));
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.shininess"), model.material.specular_Exponent);
+
+
+	glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ambientSwitch"), 1);
+	glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalSwitch"), 1);
+	glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointSwitch"), 1);
+	glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "coneSwitch"), 1);
 
 	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.emissive"), 1, glm::value_ptr(glm::vec3(0.0, 0.0, 0.0)));
 	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.ambient"), 1, glm::value_ptr(glm::vec3(1.0, 1.0, 1.0)));
@@ -347,6 +367,7 @@ void display() {
 	mat4 ModelViewProjection = Projection * View * LocalWorld;
 
 	NormalMatrix = inverseTranspose(mat3(ModelView));
+	//NormalMatrix = ModelView;
 
 	//GLint mvp_ID = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "MVP");
 	//glProgramUniformMatrix4fv(ShaderProgram, mvp_ID, 1, GL_FALSE, glm::value_ptr(ModelViewProjection));
@@ -422,16 +443,51 @@ void load_Model_texture(Model model) {
 
 void InputManager(GLFWwindow* window, int key, int scancode, int action, int mods) { //Keys Input manager
 	if (action == GLFW_PRESS) {
+		GLint value;
+
 		switch (key)
 		{
 		case GLFW_KEY_ESCAPE:
 			cout << "pressed esc" << endl;
 			glfwSetWindowShouldClose(window, 1); //asks to close
 			break;
-		case GLFW_KEY_1:
+		case GLFW_KEY_1: //Activate/Deactivate Ambient Light
+			
+			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ambientSwitch"), &value);
+			if (value == 1) value = 0;
+			else value = 1;
+			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ambientSwitch"), value);
+
+			break;
+		case GLFW_KEY_2: //Activate/Deactivate Directional Light
+	
+			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalSwitch"), &value);
+			if (value == 1) value = 0;
+			else value = 1;
+			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalSwitch"), value);
+
+
+			break;
+		case GLFW_KEY_3: //Activate/Deactivate Point Light
+
+			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointSwitch"), &value);
+			if (value == 1) value = 0;
+			else value = 1;
+			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointSwitch"), value);
+
+			break;
+		case GLFW_KEY_4: //Activate/Deactivate Cone Light
+
+			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "coneSwitch"), &value);
+			if (value == 1) value = 0;
+			else value = 1;
+			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "coneSwitch"), value);
+
+			break;
+		case GLFW_KEY_5:
 			setFullScreen(window);					//Sets FullScreen
 			break;
-		case GLFW_KEY_2:
+		case GLFW_KEY_6:
 			setWindowedScreen(window);				//Sets Windowed Mode
 			break;
 		case GLFW_KEY_LEFT:
