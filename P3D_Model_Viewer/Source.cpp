@@ -1,6 +1,6 @@
-#include "Geometry.h"
-#include "LoadShaders.h"
-#include "Camera.h"
+#pragma comment(lib, "glew32s.lib")
+#pragma comment(lib, "glfw3.lib")
+#pragma comment(lib, "opengl32.lib")
 
 #include "stb_image.h"
 #include <glm\gtc\matrix_inverse.hpp> // glm::inverseTranspose()
@@ -9,6 +9,53 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#include <iostream>
+using namespace std;
+#include <fstream>
+
+#include <iostream>
+#include <vector>
+#include <string>
+#include <cstring>
+
+#define GLEW_STATIC
+#include <GL\glew.h>
+#include <glm\glm.hpp>
+#include <glm\gtc\type_ptr.hpp>
+#include <glm\gtc\matrix_transform.hpp>
+
+#define GLFW_USE_DWM_SWAP_INTERVAL       
+#include <GLFW\glfw3.h>
+
+#include "LoadShaders.h"
+#include "Camera.h"
+#include "Model.h"
+
+
+using namespace glm;
+using namespace Model_Viewer;
+
+const vec3 DEFAULT_DIR = vec3(1.0f, 1.0f, 0.0f);
+const vec3 UP = vec3(0.0f, 1.0f, 0.0f);
+const vec3 DOWN = vec3(0.0f, -1.0f, 0.0f);
+const vec3 RIGHT = vec3(1.0f, 0.0f, 0.0f);
+const vec3 LEFT = vec3(-1.0f, 1.0f, 0.0f);
+const vec3 BACKWARD = vec3(0.0f, 0.0f, -1.0f);
+const vec3 FORWARD = vec3(0.0f, 0.0f, 1.0f);
+
+const mat4 IDENTITY = mat4(1.0f); //Indentity Matrix
+
+//Source.cpp Functions
+void init();
+void display(GLFWwindow *window);
+void InputManager(GLFWwindow* window, int key, int scancode, int action, int mods);
+void modsInput(GLFWwindow* window, unsigned int codepoint, int mods);
+void ScrollCallback(GLFWwindow * window, double xoffset, double yoffset);
+void MouseClickCallBack(GLFWwindow* window, int button, int action, int mods);
+void MousePosCallBack(GLFWwindow* window, double xpos, double ypos);
+void InputManager(GLFWwindow* window, int key, int scancode, int action, int mods);
+void setFullScreen(GLFWwindow* window);
+void setWindowedScreen(GLFWwindow* window);
 
 int screenWidth = 800;
 int screenHeight = 600;
@@ -111,27 +158,13 @@ int main() {
 
 void init() {
 	//--------------------------- Create arrays in RAM ---------------------------
-	Model model; //Model To be Rendered
 
-	switch (geometry) {
-	case 1: //Triangle
-		model = LoadTriangle();
-		numVertices += model.modelTotalVertices;
-		break;
-	case 2: //Cube
-		model = LoadCube(); //Load Cube Vertices
-		numVertices += model.modelTotalVertices;
-		break;
-	case 3: //Model
-		model = LoadXYZModel("Model/Iron_Man.xyz");
-		numVertices += model.modelTotalVertices;
-		load_Model_texture(model);
-		break;
-	default:
-		throw "Invalid geometry selected";
-		break;
-	}
-	
+	//Model model = Model(1);
+	//Model model = Model(0);
+	Model model = Model("Model/Iron_Man.xyz");
+	numVertices += model.totalVertices;
+
+
 	cout << "Ended Model Creation" << endl;
 
 	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane);
@@ -154,6 +187,7 @@ void init() {
 
 	// --------------------------- VBOs - Vertex Buffer Objects ---------------------------
 	glGenBuffers(NumBuffers, Buffers); //Generate NumBufffer names for VBOs
+
 
 	for (int i = 0; i < NumBuffers; i++) { //For each Name of VBO
 		
@@ -307,6 +341,7 @@ void init() {
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotCutoffAngle"), 0.0f);
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotExponent"), 60.0f);
 
+
 	//Material
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.emissive"), 1, value_ptr(vec3(0.0, 0.0, 0.0)));
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.ambient"), 1, value_ptr(model.material.ambient));
@@ -344,9 +379,9 @@ void display(GLFWwindow *window) {
 
 	//cout << "deltatime " << deltaTime << endl;
 
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL  /*GL_LINE*/ /*GL_POINT*/);
+	//glPolygonMode(GL_FRONT_AND_BACK, /*GL_FILL*/  GL_LINE /*GL_POINT*/);
 	//glEnable(GL_LINE_SMOOTH); //activates antialiasing
-	//glLineWidth(0.5f); //defines the line width
+	//glLineWidth(2.0f); //defines the line width
 	//glPointSize(5.0f);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	//glEnable(GL_BLEND); // Para que o GL_LINE_SMOOTH tenha efeito
@@ -409,6 +444,8 @@ void display(GLFWwindow *window) {
 	glProgramUniformMatrix4fv(ShaderProgram, projectionId, 1, GL_FALSE, glm::value_ptr(Projection));
 
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "time"), elapsedTime);
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.position"), 1, value_ptr(camera.camLocation));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr(camera.camDirection));
 
 	// Activates the VAOs
 	glBindVertexArray(VAOs[0]);
@@ -489,7 +526,7 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 			}
 			else {
 				value = 1;
-				cout << "Point Light is now on" << endl;
+				cout << "Cone Light is now on" << endl;
 			}
 			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "coneSwitch"), value);
 

@@ -184,7 +184,7 @@ vec4 calcSpotLight(SpotLight light) {
 	//vec3 lightPositionEyeSpace = mat3(View) * light.position;
 	vec3 lightPositionEyeSpace = (View * vec4(light.position, 1.0)).xyz;
 	//vec3 lightDirectionEyeSpace = (View * vec4(light.direction, 0.0)).xyz;
-	vec3 L = normalize(lightPositionEyeSpace - vPositionEyeSpace);
+	vec3 L = normalize(lightPositionEyeSpace - vPositionEyeSpace); //Light Direction
 	vec3 N = normalize(vNormalEyeSpace);
 	float NdotL = max(dot(N, L), 0.0);
 	vec4 diffuse = vec4(material.diffuse * light.diffuse, 1.0) * NdotL;

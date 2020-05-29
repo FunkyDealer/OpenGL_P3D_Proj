@@ -115,13 +115,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Geometry.cpp" />
     <ClCompile Include="LoadShaders.cpp" />
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="Geometry.h" />
     <ClInclude Include="LoadShaders.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="stb_image.h" />
