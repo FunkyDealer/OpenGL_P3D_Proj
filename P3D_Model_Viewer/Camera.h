@@ -18,18 +18,66 @@ namespace Model_Viewer {
 		GLfloat targetHeight = 0.0f;
 		GLfloat camHeight = 0.0f;
 
-		vec3 camLocation = vec3(0.0f, camHeight, zoom);
-		vec3 camTarget = vec3(0.0f, targetHeight, 0.0f);
-		vec3 camDirection = camTarget - camLocation;
+		vec3 position;
+		vec3 target;
+		vec3 direction;
+		vec3 up;
+		vec3 forward;
 
 
-		float rotX = 90, rotY = 45;
+		float rotX = 0, rotY = 0;
 		vec2 MousePos, lastMP;
 		bool canRotate = false;
 
 		mat3 YPR = mat3(1);
 
+		mat4 viewMatrix;
+
 		Camera() {
+			zoom = 10.0f;
+
+			position = vec3(0.0f, camHeight, zoom);
+			target = vec3(0.0f, 0.0f, 0.0f);
+			direction = normalize(target - position);
+			up = vec3(0.0f, 1.0f, 0.0f);
+			forward = direction;
+
+			viewMatrix = lookAt(
+				position,	// Camera Position in the World
+				direction,	// Direction at which the camera Is Pointing
+				up		// Camera Up Vector
+			);
+
+			cout << position.x << " " << position.y << " " << position.z << endl;
+		}
+
+		Camera(vec3 position, vec3 target, vec3 up) {
+		this->position = position;
+		this->target = target;
+		this->direction = normalize(target - position);
+		this->up = up;
+		this->forward = direction;
+
+		viewMatrix = lookAt(
+			position,	// Camera Position in the World
+			direction,	// Direction at which the camera Is Pointing
+			up		// Camera Up Vector
+		);
+		}
+
+		Camera(vec3 position, vec3 target, vec3 up, vec3 forward) {
+
+			this->position = position;
+			this->target = target;
+			this->direction = forward;
+			this->up = up;
+			this->forward = forward;
+
+			viewMatrix = lookAt(
+				position,	// Camera Position in the World
+				direction,	// Direction at which the camera Is Pointing
+				up		// Camera Up Vector
+			);
 
 		}
 
@@ -44,8 +92,8 @@ namespace Model_Viewer {
 
 				lastMP = MousePos;
 
-				rotX += xoffset * 0.7;
-				rotY += yoffset * 0.7;
+				rotX += xoffset * 0.01;
+				rotY += yoffset * 0.01;
 
 				if (rotY > 89)
 				{
@@ -54,7 +102,7 @@ namespace Model_Viewer {
 				else if (rotY < -89)
 				{
 					rotY = -89;
-				}
+				}		
 
 				//vec3 dir;
 				//
@@ -62,33 +110,42 @@ namespace Model_Viewer {
 				//dir.z = sin(radians(rotX));
 				//dir.y = sin(radians(rotY)) * cos(radians(rotY));
 
-				mat3 Rotz = { {1,0,0},{0,1,0},{0,0,1} };
+				mat3 Rotz = mat3(1);
 				mat3 Roty = { {cos(radians(rotX)),0,sin(radians(rotX))},{0,1,0},{-sin(radians(rotX)),0,cos(radians(rotX))} };
 				mat3 Rotx = { {1,0,0},{0,cos(radians(rotY)),-sin(radians(rotY))},{0,sin(radians(rotY)),cos(radians(rotY))} };
 
-				YPR = Rotz * Roty * Rotx;
+				
 
-				camLocation = vec3(0, targetHeight, zoom)*YPR;
-			}
-			else
-			{
-				camLocation = vec3(0, targetHeight, zoom) * YPR;
+				//YPR = Rotz * Roty * Rotx;
+				//YPR = Rotx;
+				YPR = Roty;
+
+				position = position * YPR;
 			}
 
-			//cout << canRotate << rotX << rotY << endl;
-			camTarget = vec3(0.0f, targetHeight, 0.0f);
-			camDirection = camTarget - camLocation;
+			direction = normalize(target - position);
+			forward = direction;
+
+			//cout << position.x << " " << position.y << " " << position.z << endl;
+
+			viewMatrix = lookAt(
+				position,	// Camera Position in the World
+				direction,	// Direction at which the camera Is Pointing
+				up		// Camera Up Vector
+			);
 		}
 
 		void KeyboardControl(int key, int mods) {
 			switch (key) {
 			case GLFW_KEY_UP:
-				if (mods == GLFW_MOD_CONTROL) camHeight += 1.0f;			//Changes Camera Position(Height)
-				else targetHeight += 1.0;									//Changes Camera's Target Position(Height)
+				if (mods == GLFW_MOD_CONTROL) position += up;			//Changes Camera Position(Height)
+				else { target += vec3(0.0, 1.0, 0.0); }								//Changes Camera's Target Position(Height)
+
 				break;
 			case GLFW_KEY_DOWN:
-				if (mods == GLFW_MOD_CONTROL) camHeight -= 1.0f;			//Changes Camera Position(Height)
-				else targetHeight -= 1.0f;									//Changes Camera's Target Position(Height)
+				if (mods == GLFW_MOD_CONTROL) position -= up;			//Changes Camera Position(Height)
+				else { target -= vec3(0.0, 1.0, 0.0); }				//Changes Camera's Target Position(Height)
+
 				break;
 			}
 		}
@@ -101,8 +158,19 @@ namespace Model_Viewer {
 		}
 
 		void ScrollControl(double xoffset, double yoffset) {
-			if (yoffset == 1) zoom += fabs(zoom) * 0.1f;
-			else if (yoffset == -1) zoom -= fabs(zoom) * 0.1f;
+
+			if (yoffset == 1) {
+				float distance = length(target - position);
+					if (distance > 1) {
+						position += this->forward;
+					}
+
+			//	cout << position.x << " " << position.y << " " << position.z << endl;
+			}
+			else if (yoffset == -1) {
+				position -= this->forward;
+			//	cout << position.x << " " << position.y << " " << position.z << endl;
+			}
 		}
 
 		

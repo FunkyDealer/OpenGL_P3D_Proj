@@ -50,6 +50,9 @@ void main()
 
 	switchDeform(MVP);
 
+	//vec3 tPos = vTextureCoords * 0.1 * time;
+	
+
 }
 
 void switchDeform(mat4 MVP) {
@@ -80,7 +83,7 @@ void deformModel(mat4 MVP) {
 
 void ExpandModel(mat4 MVP)
 {
-	vec3 vPos=vPosition*0.004*time;
+	vec3 vPos=vPosition*0.04*time;
     gl_Position = MVP*vec4(vPos,1f);
 
 }

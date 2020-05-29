@@ -61,8 +61,8 @@ struct Material{
 
 uniform Material material;
 
-in vec3 vPositionEyeSpace;
-in vec3 vNormalEyeSpace;
+in vec3 vPositionEyeSpace; //Vertice Positon
+in vec3 vNormalEyeSpace; //vertice Normal
 in vec3 textureVector;
 
 in vec3 color; //Vertice Color
@@ -183,8 +183,8 @@ vec4 calcSpotLight(SpotLight light) {
 	//Computes the reflection of the difuse light component
 	//vec3 lightPositionEyeSpace = mat3(View) * light.position;
 	vec3 lightPositionEyeSpace = (View * vec4(light.position, 1.0)).xyz;
-	//vec3 lightDirectionEyeSpace = (View * vec4(light.direction, 0.0)).xyz;
-	vec3 L = normalize(lightPositionEyeSpace - vPositionEyeSpace); //Light Direction
+	vec3 lightDirectionEyeSpace = normalize(vec4(light.direction,1.0) * View).xyz;
+	vec3 L = normalize(lightPositionEyeSpace - vPositionEyeSpace);
 	vec3 N = normalize(vNormalEyeSpace);
 	float NdotL = max(dot(N, L), 0.0);
 	vec4 diffuse = vec4(material.diffuse * light.diffuse, 1.0) * NdotL;
@@ -201,13 +201,15 @@ vec4 calcSpotLight(SpotLight light) {
 	float dist = length(mat3(View) * light.position - vPositionEyeSpace); //Computes the distance between a light point and a vertex
 	float attenuation = 1.0 / (light.constant + light.linear * dist + light.quadratic * (dist * dist));
 	   
-	//float spotDot = dot(normalize(light.direction), -V);
-	float spotDot = dot(-V,normalize(light.direction));	
+	float spotDot = dot(normalize(light.direction), -L);
+	spotDot = max(spotDot,0);
+	//float spotDot = dot(-V,normalize(light.direction));	
 	float spotAttenuation;  // spotlight attenuation factor	
 
-	if (cos(spotDot) > light.spotCutoffAngle) { //Cut off Angle	   
+	if (acos(spotDot) < radians(light.spotCutoffAngle)) { //Cut off Angle	   
 	spotAttenuation = pow(spotDot, light.spotExponent);
-	//spotAttenuation = max(dot(N, -V), 0.0);
+	//spotAttenuation = max(dot(N, -V), 0.0);	
+
 	}
 	else {
 	spotAttenuation = 0.0; //Light adds no contribution
@@ -216,9 +218,7 @@ vec4 calcSpotLight(SpotLight light) {
 	attenuation = spotAttenuation;
 
 	//Computes the point light contribution for the final color of the fragment
-	vec4 rValue = (attenuation * (ambient + diffuse + specular));	
-
-	return rValue;
+	return (attenuation * (ambient + diffuse + specular));	
 
 //return vec4(0.0);
 }

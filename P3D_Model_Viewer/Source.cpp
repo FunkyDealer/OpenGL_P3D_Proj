@@ -93,7 +93,7 @@ float deltaTime = 0;
 float elapsedTime = 0;
 float oldTimeSinceStart = 0;
 
-bool isRotating = true;
+bool isRotating = false;
 
 Camera camera;
 
@@ -169,11 +169,7 @@ void init() {
 
 	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane);
 
-	View = glm::lookAt(
-		vec3(0.0f, 0.0f, camera.zoom),	// eye (posicao da camara). Cmaara na posicao (x=0, y=0, z=5). Nota que movo o mundo em sentido contrario.
-		BACKWARD,	// center (para onde esta a "olhar")
-		UP		// up
-	);
+	View = camera.viewMatrix;
 
 	LocalWorld = IDENTITY;
 	mat4 ModelView = View * LocalWorld;
@@ -329,7 +325,7 @@ void init() {
 
 	//// Fonte de luz Conica
 	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLightt.position"), 1, value_ptr(vec3(-2.0, 2.0, 5.0)));
-	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.position"), 1, value_ptr( camera.camLocation ));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.position"), 1, value_ptr( camera.position ));
 	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLightt.direction"), 1, value_ptr(vec3(0.2, 0.2, 0.2)));
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.ambient"), 1, value_ptr(vec3(0.1, 0.1, 0.1)));
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.diffuse"), 1, value_ptr(vec3(1.0, 1.0, 1.0)));
@@ -337,9 +333,9 @@ void init() {
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.constant"), 1.0f);
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.linear"), 0.06f);
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.quadratic"), 0.02f);
-	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr( camera.camDirection ));
-	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotCutoffAngle"), 0.0f);
-	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotExponent"), 60.0f);
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr( camera.direction ));
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotCutoffAngle"), 40.0f);
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotExponent"), 2.0f);
 
 
 	//Material
@@ -400,22 +396,12 @@ void display(GLFWwindow *window) {
 
 	camera.update();
 
-
-
-	//camLocation = vec3(0.0f, camHeight, zoom);
-	//camTarget = vec3(0.0f, targetHeight, 0.0f);
-	//camDirection = camTarget - camLocation;
-
 	//View Matrix - Camera
-	View = lookAt(
-		camera.camLocation,	// Camera Position in the World
-		camera.camDirection,	// Direction at which the camera Is Pointing
-		UP		// Camera Up Vector
-	);
+	View = camera.viewMatrix;
 
 	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane); //Projection Matrix
 
-	//if (isRotating) LocalWorld = rotate(IDENTITY, ANGLE += rotateSpeed, normalize(UP)); //Rotate Model Automatically
+	if (isRotating) LocalWorld = rotate(IDENTITY, ANGLE += rotateSpeed, normalize(UP)); //Rotate Model Automatically
 
 	mat4 ModelView = View * LocalWorld;
 
@@ -444,15 +430,16 @@ void display(GLFWwindow *window) {
 	glProgramUniformMatrix4fv(ShaderProgram, projectionId, 1, GL_FALSE, glm::value_ptr(Projection));
 
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "time"), elapsedTime);
-	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.position"), 1, value_ptr(camera.camLocation));
-	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr(camera.camDirection));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.position"), 1, value_ptr(camera.position));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr(normalize(camera.direction)));
+
+	//cout << "Camera X: " << camera.camLocation.x << "Camera Y: " << camera.camLocation.y << "Camera Z: " << camera.camLocation.z << endl;
 
 	// Activates the VAOs
 	glBindVertexArray(VAOs[0]);
 
 	//Draws Primitives GL_TRIANGLES using active VAOs
 	glDrawArrays(GL_TRIANGLES, 0, numVertices);	
-
 
 	glfwSwapBuffers(window); //Buffers
 	glfwPollEvents(); //Events
@@ -555,7 +542,6 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 			cout << "Model Expansion Deformation" << endl;
 			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), value);
 			break;
-
 		case GLFW_KEY_R:
 			if (isRotating) isRotating = false;
 			else isRotating = true;
