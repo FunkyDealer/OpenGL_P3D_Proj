@@ -43,16 +43,22 @@ using namespace Model_Viewer;
 	Model LoadTriangle();
 	Model LoadXYZModel(string fileName);
 	Material getMaterial(string file);
+	void load_Model_texture(Model model);
 
 	//Source.cpp Functions
 	void init();
-	void load_Model_texture(Model model);
-	void display();
+	void display(GLFWwindow *window);
 	void InputManager(GLFWwindow* window, int key, int scancode, int action, int mods);
 	void modsInput(GLFWwindow* window, unsigned int codepoint, int mods);
+	void ScrollCallback(GLFWwindow * window, double xoffset, double yoffset);
+	void MouseClickCallBack(GLFWwindow* window, int button, int action, int mods);
+	void MousePosCallBack(GLFWwindow* window, double xpos, double ypos);
+	void InputManager(GLFWwindow* window, int key, int scancode, int action, int mods);
 	void setFullScreen(GLFWwindow* window);
 	void setWindowedScreen(GLFWwindow* window);
-	void scrollCallback(GLFWwindow * window, double xoffset, double yoffset);
-	void mouseClickCallBack(GLFWwindow* window, int button, int action, int mods);
-	void mousePosCallBack(GLFWwindow* window, double xpos, double ypos);
+
+
+
+
+
 

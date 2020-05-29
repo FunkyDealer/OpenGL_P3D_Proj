@@ -1,10 +1,5 @@
 #version 440 core
 
-//layout(location = 0) in vec3 color; Vertice Color
-//
-//layout (location = 0) out vec4 fColor;  Final Color of Fragments
-//layout (location = 1) in vec2 textureCoord;	 Texture Coordinate
-
 //global Ambient Light Source Struct
 struct AmbientLight {
 	vec3 ambient; //Global ambient light component
@@ -188,8 +183,8 @@ vec4 calcSpotLight(SpotLight light) {
 	//Computes the reflection of the difuse light component
 	//vec3 lightPositionEyeSpace = mat3(View) * light.position;
 	vec3 lightPositionEyeSpace = (View * vec4(light.position, 1.0)).xyz;
-	vec3 lightDirectionEyeSpace = (View * vec4(light.direction, 0.0)).xyz;
-	vec3 L = normalize(-lightDirectionEyeSpace);
+	//vec3 lightDirectionEyeSpace = (View * vec4(light.direction, 0.0)).xyz;
+	vec3 L = normalize(lightPositionEyeSpace - vPositionEyeSpace);
 	vec3 N = normalize(vNormalEyeSpace);
 	float NdotL = max(dot(N, L), 0.0);
 	vec4 diffuse = vec4(material.diffuse * light.diffuse, 1.0) * NdotL;
@@ -200,40 +195,28 @@ vec4 calcSpotLight(SpotLight light) {
 	vec3 R = reflect(-L, N);
 	float RdotV = max(dot(R, V), 0.0);
 	//float NdotH = max(dot(N, H), 0.0);	//Blinn-Phong Model
-	vec4 specular = pow(RdotV, material.shininess) * vec4(light.specular * material.specular, 1.0);
-	
+	vec4 specular = pow(RdotV, material.shininess) * vec4(light.specular * material.specular, 1.0);	
+
 	// attenuation
 	float dist = length(mat3(View) * light.position - vPositionEyeSpace); //Computes the distance between a light point and a vertex
 	float attenuation = 1.0 / (light.constant + light.linear * dist + light.quadratic * (dist * dist));
+	   
+	//float spotDot = dot(normalize(light.direction), -V);
+	float spotDot = dot(-V,normalize(light.direction));	
+	float spotAttenuation;  // spotlight attenuation factor	
 
-	//Compute distance between surface and Light Position
-	vec3 VP = vec3(light.position - vPositionEyeSpace); 
-	VP = normalize(VP);
-
-	float spotDot = dot(-VP, normalize(light.direction));
-	
-	 float spotAttenuation;  // spotlight attenuation factor
-
-	if (spotDot < light.spotCutoffAngle)
-	spotAttenuation = 0,0; //Light adds no contribution
-	else 
+	if (cos(spotDot) > light.spotCutoffAngle) { //Cut off Angle	   
 	spotAttenuation = pow(spotDot, light.spotExponent);
+	//spotAttenuation = max(dot(N, -V), 0.0);
+	}
+	else {
+	spotAttenuation = 0.0; //Light adds no contribution
+	}
 
-	attenuation *= spotAttenuation;
-
-	 vec3  halfVector = normalize(VP + vPositionEyeSpace); // direction of maximum highlights
-
-	 float nDotVP = max(0.0 , dot(N, VP));      // normal . light direction
-     float nDotHV = max(0.0, dot(N, halfVector));      // normal . light half vector
-
-	 float pf;  // power factor
-	 if (nDotVP == 0.0) pf =0.0;
-	 else pf = pow(nDotHV, material.shininess);
-
+	attenuation = spotAttenuation;
 
 	//Computes the point light contribution for the final color of the fragment
-	vec4 rValue = (attenuation * (ambient + diffuse * nDotVP + specular * pf));
-	
+	vec4 rValue = (attenuation * (ambient + diffuse + specular));	
 
 	return rValue;
 

@@ -77,7 +77,6 @@ Model LoadCube() { //Generates  Cube
 				break;
 			}
 		};
-
 	}
 
 	model.colors = colors;
@@ -125,8 +124,6 @@ Model LoadTriangle() {
 	return model;
 }
 
-
-
 Model LoadXYZModel(string fileName)
 {
 	Model model;
@@ -150,8 +147,6 @@ Model LoadXYZModel(string fileName)
 			file >> material;
 			cout << "fount material " << material << endl;
 		}
-
-		//getline(file, material);
 
 		while (getline(file, line))
 		{
@@ -190,14 +185,7 @@ Model LoadXYZModel(string fileName)
 			}
 		}
 		int n = 0;
-		/*while (n < Vertices[0].size())
-		{
-			cout << "Coordenada " << n << " :" << endl;
-			cout << "X:" << Vertices[0].at(n) << " Y:" << Vertices[1].at(n) << " Z:" << Vertices[2].at(n) << endl;
-			cout << "Xt:" << Text_Coords[0].at(n) << " Yt:" << Text_Coords[1].at(n) << endl;
-			cout << "Xn:" << Vertice_Normals[0].at(n) << " Yn:" << Vertice_Normals[1].at(n) << " Zn:" << Vertice_Normals[2].at(n) << endl;
-			n++;
-		}*/
+
 		file.close();
 
 		model.modelTotalVertices = nv;
@@ -286,6 +274,7 @@ Model LoadXYZModel(string fileName)
 
 	model.material = getMaterial(model.getMaterialFile());
 	
+	model.setName("Model");
 
 	return model;
 }
@@ -378,46 +367,64 @@ Material getMaterial(string file) {
 	material.map = "Model/";
 	material.map.append(MAP);
 
-	//vec3* kaCoords = (vec3*)malloc(1 * sizeof(vec3)); //ka
-	//int currentV = 0;
 
 	vec3 kaCoords = vec3(matKA[0], matKA[1], matKA[2]);
 
-	//for (int n = 0; n < 3; n++)
-	//{
-	//	kaCoords[currentV] = matKA[n].at(0);
-	//	currentV++;
-	//}
-
 	material.ambient = kaCoords;
-
-	//vec3* kdCoords = (vec3*)malloc(sizeof(vec3)); //kd
-	//currentV = 0;
 
 	vec3 kdCoords = vec3(matKD[0], matKD[1], matKD[2]);
 
-	//for (int n = 0; n < 3; n++)
-	//{
-	//	kdCoords[currentV] = matKD[n].at(0);
-	//	currentV++;
-	//}
 	material.difuse = kdCoords;
-
-	//vec3* ksCoords = (vec3*)malloc(sizeof(vec3)); //ks
-	//currentV = 0;
 
 	vec3 ksCoords = vec3(matKS[0], matKS[1], matKS[2]);
 
-	//for (int n = 0; n < 3; n++)
-	//{
-	//	ksCoords[currentV] = matKS[n].at(0);
-	//	currentV++;
-	//}
 	material.specular = ksCoords;
 
 	return material;
 }
 
+void load_Model_texture(Model model) {
+	GLuint textureName = 0;
+
+	//Generates a name for the Texture
+	glGenTextures(1, &textureName);
+
+	//Activate Texture Unit #0
+	glActiveTexture(GL_TEXTURE0);
+
+	//Assigns that texture name to the target GL_TEXTURE_2D from the active Texture Unit
+	glBindTexture(GL_TEXTURE_2D, textureName);
+
+	//Defines filtering parameters (Wrapping and size adjusting)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	//Reading and unconpressing of the file with the texture Image
+	int width, height, nChannels;
+	//Activates Image vertical flipping
+	stbi_set_flip_vertically_on_load(true);
+	//Loading the Image to the CPU
+
+	string textureFile = model.material.map; //Gets the texture file from the model's material
+	const char *cstr = textureFile.c_str(); //Converts the string to a constant char
+
+	unsigned char *imageData = stbi_load(cstr, &width, &height, &nChannels, 0);
+	if (imageData) {
+		//Loads the image data to the assigned texture object of the GL_TEXTURE_2d
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, nChannels == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, imageData);
+
+		//Generate a mipMap for that texture
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		//Unloads the image from CPU Memory
+		stbi_image_free(imageData);
+	}
+	else {
+		cout << "Error loading texture!" << endl;
+	}
+}
 
 
 

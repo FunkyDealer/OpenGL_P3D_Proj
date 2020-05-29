@@ -1,5 +1,6 @@
 #include "Geometry.h"
 #include "LoadShaders.h"
+#include "Camera.h"
 
 #include "stb_image.h"
 #include <glm\gtc\matrix_inverse.hpp> // glm::inverseTranspose()
@@ -24,9 +25,6 @@ GLuint ShaderProgram;
 mat4 LocalWorld, View, Projection;
 mat3 NormalMatrix;  //Normal Matrix For Light
 
-GLfloat zoom = 10.0f;
-GLfloat targetHeight = 0.0f;
-GLfloat camHeight = 0.0f;
 GLfloat ANGLE = 0.0f; //ANGLE OF MODEL
 float rotateSpeed = 0.01f; //Speed at which it rotates
 
@@ -43,12 +41,20 @@ bool mouse1Pressed = false;
 bool ctrlPressed = false;
 vec2 mouse1PressLocation = vec2(0, 0);
 
-vec3 camLocation = vec3(0.0f, camHeight, zoom);
-vec3 camTarget = vec3(0.0f, targetHeight, 0.0f);
-vec3 camDirection = camTarget - camLocation;
+
+float deltaTime = 0;
+float elapsedTime = 0;
+float oldTimeSinceStart = 0;
+
 bool isRotating = true;
 
+Camera camera;
+
+
+
 int main() {
+
+
 	GLFWwindow *window;
 
 	if (!glfwInit()) return -1;
@@ -71,25 +77,28 @@ int main() {
 	glewInit();
 	glfwSwapInterval(1); //sets v-Sync
 
+	camera = Camera();
+
 	init();
 
 	//Callback Functions
 	glfwSetKeyCallback(window, InputManager); //Input with keys
-	glfwSetScrollCallback(window, scrollCallback); //Input with mousewheel
 	glfwSetCharModsCallback(window, modsInput); //Input with Mods
-	glfwSetMouseButtonCallback(window, mouseClickCallBack); //Input with Mouse
-	glfwSetCursorPosCallback(window, mousePosCallBack); //Input with Mouse Position;
+	glfwSetScrollCallback(window, ScrollCallback); //Input with mousewheel
+	glfwSetMouseButtonCallback(window, MouseClickCallBack); //Input with Mouse
+	glfwSetCursorPosCallback(window, MousePosCallBack); //Input with Mouse Position;
+
 
 	mat4 projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane);
 	mat4 LocalWorld = mat4(1.0f); //Model World //identity matrix
 
+
 	while (!glfwWindowShouldClose(window)) { //Indica pedido de fecho glfwSetWindowShouldClose(window, 1); //Pede para fechar
 		
 
-		display();
+		display(window);
 
-		glfwSwapBuffers(window); //Buffers
-		glfwPollEvents(); //Events
+
 	}
 
 	glfwDestroyWindow(window);
@@ -128,7 +137,7 @@ void init() {
 	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane);
 
 	View = glm::lookAt(
-		vec3(0.0f, 0.0f, zoom),	// eye (posicao da camara). Cmaara na posicao (x=0, y=0, z=5). Nota que movo o mundo em sentido contrario.
+		vec3(0.0f, 0.0f, camera.zoom),	// eye (posicao da camara). Cmaara na posicao (x=0, y=0, z=5). Nota que movo o mundo em sentido contrario.
 		BACKWARD,	// center (para onde esta a "olhar")
 		UP		// up
 	);
@@ -169,9 +178,7 @@ void init() {
 		{ GL_VERTEX_SHADER,   "Shader.vert" },
 		{ GL_FRAGMENT_SHADER, "Shader.frag" },
 		{ GL_NONE, NULL }
-	};	
-
-	
+	};		
 
 	ShaderProgram = LoadShaders(shaders);
 	if (!ShaderProgram) exit(EXIT_FAILURE);
@@ -193,8 +200,7 @@ void init() {
 	GLint textureID = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vTextureCoords");
 
 	//Get the Location of the vNormal in the Shader Program
-	GLint normalId = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vNormal");
-	
+	GLint normalId = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vNormal");	
 
 
 	// put a valor in uniform MVP
@@ -233,7 +239,8 @@ void init() {
 
 	glEnableVertexAttribArray(normalId); //Activate the Normal Attribute for the Active VAO
 	
-
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "time"), glfwGetTime());
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), 0);
 
 	//points the unit of texture to connect to the sampler TexSampler
 	GLint locationTexSampler = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "TexSampler");
@@ -287,17 +294,18 @@ void init() {
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointLight[1].quadratic"), 0.02f);
 
 	//// Fonte de luz Conica
-	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLightt.position"), 1, value_ptr(vec3(-2.0, 2.0, 5.0)));
-	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLightt.direction"), 1, value_ptr(vec3(0.2, 0.2, 0.2)));
+	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLightt.position"), 1, value_ptr(vec3(-2.0, 2.0, 5.0)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.position"), 1, value_ptr( camera.camLocation ));
+	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLightt.direction"), 1, value_ptr(vec3(0.2, 0.2, 0.2)));
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.ambient"), 1, value_ptr(vec3(0.1, 0.1, 0.1)));
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.diffuse"), 1, value_ptr(vec3(1.0, 1.0, 1.0)));
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.specular"), 1, value_ptr(vec3(1.0, 1.0, 1.0)));
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.constant"), 1.0f);
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.linear"), 0.06f);
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.quadratic"), 0.02f);
-	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr(vec3(1.0, 0.0, 0.0)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr( camera.camDirection ));
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotCutoffAngle"), 0.0f);
-	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotExponent"), 1.0f);
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotExponent"), 60.0f);
 
 	//Material
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.emissive"), 1, value_ptr(vec3(0.0, 0.0, 0.0)));
@@ -322,10 +330,19 @@ void init() {
 	
 }
 
-void display() {
+
+
+void display(GLFWwindow *window) {
 	static const float black[] = { 0.0f, 0.0f, 0.0f, 0.0f }; //Black Color
 	static const float white[] = { 1.0f, 1.0f, 1.0f, 1.0f }; //White Color
 	static const float grey[] = { 0.4f, 0.4f, 0.4f, 1.0f }; //Grey Color
+
+	elapsedTime = glfwGetTime();
+	float timeSinceStart = elapsedTime;
+	deltaTime = timeSinceStart - oldTimeSinceStart;
+	oldTimeSinceStart = timeSinceStart;
+
+	//cout << "deltatime " << deltaTime << endl;
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL  /*GL_LINE*/ /*GL_POINT*/);
 	//glEnable(GL_LINE_SMOOTH); //activates antialiasing
@@ -346,21 +363,24 @@ void display() {
 
 	// Update Uniform data
 
-	//Update Camera  Data
-	camLocation = vec3(0.0f, camHeight, zoom);
-	camTarget = vec3(0.0f, targetHeight, 0.0f);
-	camDirection = camTarget - camLocation;
+	camera.update();
+
+
+
+	//camLocation = vec3(0.0f, camHeight, zoom);
+	//camTarget = vec3(0.0f, targetHeight, 0.0f);
+	//camDirection = camTarget - camLocation;
 
 	//View Matrix - Camera
 	View = lookAt(
-		camLocation,	// Camera Position in the World
-		camDirection,	// Direction at which the camera Is Pointing
+		camera.camLocation,	// Camera Position in the World
+		camera.camDirection,	// Direction at which the camera Is Pointing
 		UP		// Camera Up Vector
 	);
 
 	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane); //Projection Matrix
 
-	if (isRotating) LocalWorld = rotate(IDENTITY, ANGLE += rotateSpeed, normalize(UP)); //Rotate Model Automatically
+	//if (isRotating) LocalWorld = rotate(IDENTITY, ANGLE += rotateSpeed, normalize(UP)); //Rotate Model Automatically
 
 	mat4 ModelView = View * LocalWorld;
 
@@ -388,62 +408,28 @@ void display() {
 	GLint projectionId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "Projection");
 	glProgramUniformMatrix4fv(ShaderProgram, projectionId, 1, GL_FALSE, glm::value_ptr(Projection));
 
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "time"), elapsedTime);
+
 	// Activates the VAOs
 	glBindVertexArray(VAOs[0]);
 
 	//Draws Primitives GL_TRIANGLES using active VAOs
 	glDrawArrays(GL_TRIANGLES, 0, numVertices);	
+
+
+	glfwSwapBuffers(window); //Buffers
+	glfwPollEvents(); //Events
 }
 
-void load_Model_texture(Model model) {
-	GLuint textureName = 0;
 
-	//Generates a name for the Texture
-	glGenTextures(1, &textureName);
-
-	//Activate Texture Unit #0
-	glActiveTexture(GL_TEXTURE0);
-
-	//Assigns that texture name to the target GL_TEXTURE_2D from the active Texture Unit
-	glBindTexture(GL_TEXTURE_2D, textureName);
-
-	//Defines filtering parameters (Wrapping and size adjusting)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	//Reading and unconpressing of the file with the texture Image
-	int width, height, nChannels;
-	//Activates Image vertical flipping
-	stbi_set_flip_vertically_on_load(true);
-	//Loading the Image to the CPU
-
-	string textureFile = model.material.map; //Gets the texture file from the model's material
-	const char *cstr = textureFile.c_str(); //Converts the string to a constant char
-
-	unsigned char *imageData = stbi_load(cstr, &width, &height, &nChannels, 0);
-	if (imageData) {
-		//Loads the image data to the assigned texture object of the GL_TEXTURE_2d
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, nChannels == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, imageData);
-
-		//Generate a mipMap for that texture
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		//Unloads the image from CPU Memory
-		stbi_image_free(imageData);
-	}
-	else {
-		cout << "Error loading texture!" << endl;
-	}
-}
 
 
 //-----------------------------------Inputs bellow -----------------------------------------
-
 void InputManager(GLFWwindow* window, int key, int scancode, int action, int mods) { //Keys Input manager
 	if (action == GLFW_PRESS) {
 		GLint value;
+
+		camera.KeyboardControl(key, mods);
 
 		switch (key)
 		{
@@ -452,18 +438,30 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 			glfwSetWindowShouldClose(window, 1); //asks to close
 			break;
 		case GLFW_KEY_1: //Activate/Deactivate Ambient Light
-			
+
 			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ambientSwitch"), &value);
-			if (value == 1) value = 0;
-			else value = 1;
+			if (value == 1) {
+				value = 0;
+				cout << "Ambient Light is now off" << endl;
+			}
+			else {
+				value = 1;
+				cout << "Ambient Light is now on" << endl;
+			}
 			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ambientSwitch"), value);
 
 			break;
 		case GLFW_KEY_2: //Activate/Deactivate Directional Light
-	
+
 			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalSwitch"), &value);
-			if (value == 1) value = 0;
-			else value = 1;
+			if (value == 1) {
+				value = 0;
+				cout << "Directional Light is now off" << endl;
+			}
+			else {
+				value = 1;
+				cout << "Directional Light is now on" << endl;
+			}
 			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalSwitch"), value);
 
 
@@ -471,16 +469,28 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 		case GLFW_KEY_3: //Activate/Deactivate Point Light
 
 			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointSwitch"), &value);
-			if (value == 1) value = 0;
-			else value = 1;
+			if (value == 1) {
+				value = 0;
+				cout << "Point Light is now off" << endl;
+			}
+			else {
+				value = 1;
+				cout << "Point Light is now on" << endl;
+			}
 			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointSwitch"), value);
 
 			break;
 		case GLFW_KEY_4: //Activate/Deactivate Cone Light
 
 			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "coneSwitch"), &value);
-			if (value == 1) value = 0;
-			else value = 1;
+			if (value == 1) {
+				value = 0;
+				cout << "Cone Light is now off" << endl;
+			}
+			else {
+				value = 1;
+				cout << "Point Light is now on" << endl;
+			}
 			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "coneSwitch"), value);
 
 			break;
@@ -490,23 +500,29 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 		case GLFW_KEY_6:
 			setWindowedScreen(window);				//Sets Windowed Mode
 			break;
-		case GLFW_KEY_LEFT:
-			
+		case GLFW_KEY_F1: //Disable Deformation
+			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), &value);
+			value = 0;
+			cout << "Stopped Deformations" << endl;
+			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), value);
 			break;
-		case GLFW_KEY_RIGHT:
-			
+		case GLFW_KEY_F2: //Enable Deformation
+			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), &value);
+			value = 1;
+			cout << "Model Ripple Deformation" << endl;
+			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), value);
 			break;
-		case GLFW_KEY_UP:												
-			if (mods == GLFW_MOD_CONTROL) camHeight += 1.0f;			//Changes Camera Position(Height)
-			else targetHeight += 1.0;									//Changes Camera's Target Position(Height)
+		case GLFW_KEY_F3: //Enable Deformation
+			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), &value);
+			value = 2;
+			cout << "Model Expansion Deformation" << endl;
+			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), value);
 			break;
-		case GLFW_KEY_DOWN:
-			if (mods == GLFW_MOD_CONTROL) camHeight -= 1.0f;			//Changes Camera Position(Height)
-			else targetHeight -= 1.0f;									//Changes Camera's Target Position(Height)
-			break;
+
 		case GLFW_KEY_R:
 			if (isRotating) isRotating = false;
 			else isRotating = true;
+			break;
 		}
 	}
 }
@@ -518,6 +534,37 @@ void modsInput(GLFWwindow* window, unsigned int codepoint, int mods) { //Mods In
 	}	
 }
 
+
+void ScrollCallback(GLFWwindow *window, double xoffset, double yoffset) { //Scrolling CallBack
+	camera.ScrollControl(xoffset, yoffset);
+}
+
+void MouseClickCallBack(GLFWwindow* window, int button, int action, int mods) { //On mouse Click Call Back
+	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) {
+		//cout << "mouse 1 pressed" << endl;
+		mouse1Pressed = true;
+
+		double x;
+		double y;
+		glfwGetCursorPos(window, &x, &y);
+
+		mouse1PressLocation = vec2(x, y);
+		camera.lastMP = camera.MousePos;
+		camera.canRotate = true;
+	}
+	else if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_RELEASE) {
+		//cout << "mouse 1 released" << endl;
+		mouse1Pressed = false;
+		mouse1PressLocation = vec2(0, 0);
+		camera.canRotate = false;
+	}
+}
+
+void MousePosCallBack(GLFWwindow* window, double xpos, double ypos) { //Mouse Position CallBack - Gets Mouse Position every frame
+	camera.MouseControl(mouse1Pressed, xpos, ypos);
+}
+
+
 void setFullScreen(GLFWwindow* window) { //Set Full screen
 	GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 	const GLFWvidmode* videoMode = glfwGetVideoMode(monitor);
@@ -525,7 +572,7 @@ void setFullScreen(GLFWwindow* window) { //Set Full screen
 	int fullWidth = videoMode->width;
 	int fullHeight = videoMode->height;
 
-	cout << "width: " << fullWidth << " heigth " << fullHeight << endl;
+	cout << "width: " << fullWidth << " heigth " << fullHeight << " " << videoMode->refreshRate << endl;
 
 	aspectRatio = float(fullWidth) / float(fullHeight);
 
@@ -547,36 +594,8 @@ void setWindowedScreen(GLFWwindow* window) { //Set Windowed
 	glViewport(0, 0, screenWidth, screenHeight);
 }
 
-void scrollCallback(GLFWwindow *window, double xoffset, double yoffset) { //Scrolling CallBack
-	if (yoffset == 1) zoom += fabs(zoom) * 0.1f;
-	else if (yoffset == -1) zoom -= fabs(zoom) * 0.1f;
-}
 
-void mousePosCallBack(GLFWwindow* window, double xpos, double ypos) { //Mouse Position CallBack - Gets Mouse Position every frame
-	if (mouse1Pressed) {
-		//cout << "X: " << xpos << " Y: " << ypos << endl;
-		vec2 currentLoc = vec2(xpos, ypos);
-		vec2 dir = currentLoc - mouse1PressLocation;
-	}
-}
 
-void mouseClickCallBack(GLFWwindow* window, int button, int action, int mods) { //On mouse Click Call Back
-	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) {
-		//cout << "mouse 1 pressed" << endl;
-		mouse1Pressed = true;
 
-		double x;
-		double y;
-		glfwGetCursorPos(window, &x, &y);
 
-		mouse1PressLocation = vec2(x, y);
-
-	}
-	else if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_RELEASE) {
-		//cout << "mouse 1 released" << endl;
-		mouse1Pressed = false;
-		mouse1PressLocation = vec2(0, 0);
-	}
-
-}
 
