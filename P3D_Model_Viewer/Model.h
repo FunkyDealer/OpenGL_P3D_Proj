@@ -44,7 +44,7 @@ namespace Model_Viewer {
 		GLfloat *colors; //Vertice Colors information
 		GLfloat *textures; //vertice Texture Coordinates information
 		GLfloat *normals; //vertice Normal coordinates information
-		float totalVertices; //Total of vertices
+		int totalVertices; //Total of vertices
 		float totalColors; //total of color vertices
 		float totalTextures; //Total of texture vertice 
 		float totalNormals; //Total of normals
@@ -52,14 +52,12 @@ namespace Model_Viewer {
 
 		unsigned char *imageData; //Texture ImageData
 
-		Model(GLfloat &v, GLfloat &vc) { //Create a model from just vertices and colors
-			*vertices = v;
-			*colors = vc;
-		}
-
-		Model(string file) {
+		Model(string file, GLuint *sceneTotalVertices, int *sceneTotalVaos) {
 			LoadXYZModel(file);
 			LoadTexture();
+
+			*sceneTotalVertices += totalVertices;
+			*sceneTotalVaos++;
 		}
 
 		Model(int type) {
@@ -351,7 +349,7 @@ namespace Model_Viewer {
 
 			vec3 ksCoords = vec3(matKS[0], matKS[1], matKS[2]);
 
-			material.specular = ksCoords;
+			material.specular = ksCoords;			
 
 			return material;
 		}

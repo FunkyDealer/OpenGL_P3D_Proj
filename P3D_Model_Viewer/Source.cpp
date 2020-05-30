@@ -56,15 +56,17 @@ void MousePosCallBack(GLFWwindow* window, double xpos, double ypos);
 void InputManager(GLFWwindow* window, int key, int scancode, int action, int mods);
 void setFullScreen(GLFWwindow* window);
 void setWindowedScreen(GLFWwindow* window);
+void switchLight(string light);
 
 int screenWidth = 800;
 int screenHeight = 600;
 char title[20] = "Model Viewer";
 
 //VAOS && VBOs
-#define NumVAOs 1
 #define NumBuffers 4 // Vertices, Cores, Textures
-GLuint VAOs[NumVAOs];
+int SceneTotalVAOs;
+//GLuint VAOs[NumVAOs];
+GLuint *VAOs;
 GLuint Buffers[NumBuffers];
 
 GLuint ShaderProgram;
@@ -82,7 +84,7 @@ float aspectRatio = float(screenWidth) / float(screenHeight);
 
 int geometry = 3;
 
-GLuint numVertices = 0;
+GLuint SceneTotalVertices = 0;
 
 bool mouse1Pressed = false;
 bool ctrlPressed = false;
@@ -135,7 +137,6 @@ int main() {
 	glfwSetMouseButtonCallback(window, MouseClickCallBack); //Input with Mouse
 	glfwSetCursorPosCallback(window, MousePosCallBack); //Input with Mouse Position;
 
-
 	mat4 projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane);
 	mat4 LocalWorld = mat4(1.0f); //Model World //identity matrix
 
@@ -161,9 +162,9 @@ void init() {
 
 	//Model model = Model(1);
 	//Model model = Model(0);
-	Model model = Model("Model/Iron_Man.xyz");
-	numVertices += model.totalVertices;
+	Model model = Model("Model/Iron_Man.xyz", &SceneTotalVertices, &SceneTotalVAOs);
 
+	VAOs = (GLuint*)malloc(SceneTotalVAOs * sizeof(GLuint)); //VAOs Array
 
 	cout << "Ended Model Creation" << endl;
 
@@ -178,28 +179,31 @@ void init() {
 	mat4 ModelViewProjection = Projection * View * LocalWorld;
 
 	// --------------------------- VAOs - Vertex Array Objects ---------------------------
-	glGenVertexArrays(NumVAOs, VAOs); //Generate VAO
-	glBindVertexArray(VAOs[0]); //Bind VAO "0"
+	glGenVertexArrays(SceneTotalVAOs, VAOs); //Generate VAO
+
+	for (int i = 0; i < SceneTotalVAOs; i++)
+	{
+		glBindVertexArray(VAOs[i]); //Bind VAO
+	}	
 
 	// --------------------------- VBOs - Vertex Buffer Objects ---------------------------
 	glGenBuffers(NumBuffers, Buffers); //Generate NumBufffer names for VBOs
-
 
 	for (int i = 0; i < NumBuffers; i++) { //For each Name of VBO
 		
 		glBindBuffer(GL_ARRAY_BUFFER, Buffers[i]); //Bind VBO to buffer GL_ARRAY_BUFFER
 		switch (i) {
 		case 0:
-			glBufferStorage(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), model.vertices, 0); //Initialize the VBO that's active
+			glBufferStorage(GL_ARRAY_BUFFER, SceneTotalVertices * 3 * sizeof(float), model.vertices, 0); //Initialize the VBO that's active
 			break;
 		case 1:	
-			glBufferStorage(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), model.colors, 0); //Initialize the VBO that's active 	
+			glBufferStorage(GL_ARRAY_BUFFER, SceneTotalVertices * 3 * sizeof(float), model.colors, 0); //Initialize the VBO that's active 	
 			break;
 		case 2:
-			glBufferStorage(GL_ARRAY_BUFFER, numVertices * 2 * sizeof(float), model.textures, 0); //Initialize the VBO that's active 
+			glBufferStorage(GL_ARRAY_BUFFER, SceneTotalVertices * 2 * sizeof(float), model.textures, 0); //Initialize the VBO that's active 
 			break;
 		case 3:
-			glBufferStorage(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), model.normals, 0); //Initialize the VBO that's active 
+			glBufferStorage(GL_ARRAY_BUFFER, SceneTotalVertices * 3 * sizeof(float), model.normals, 0); //Initialize the VBO that's active 
 		}
 	}	
 
@@ -215,8 +219,6 @@ void init() {
 	glUseProgram(ShaderProgram);	
 
 	// --------------------------- Connect Atributtes to Shaders ---------------------------
-	
-
 	// Get the Location of Attribute vPosition in Shader Program
 	//GLint Coors_ID = glGetAttribLocation(shaderProgram, "vPosition"); // for versions older than 4.3
 	GLint Coords_ID = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vPosition"); // for versions new or equal to 4.3
@@ -231,13 +233,6 @@ void init() {
 
 	//Get the Location of the vNormal in the Shader Program
 	GLint normalId = glGetProgramResourceLocation(ShaderProgram, GL_PROGRAM_INPUT, "vNormal");	
-
-
-	// put a valor in uniform MVP
-	//GLint mvp_ID = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "MVP");
-	//glProgramUniformMatrix4fv(ShaderProgram, mvp_ID, 1, GL_FALSE, value_ptr(ModelViewProjection));
-
-	//glBindVertexArray(VAOs[0]); // it's not necessary to bind the VAO, as it is already active in opengl context.
 
 	// Activate the VBO buffer[0]
 	glBindBuffer(GL_ARRAY_BUFFER, Buffers[0]);
@@ -260,13 +255,9 @@ void init() {
 	//  connects the attribute 'vNormal' from shaders to the active VBO and VAO
 	glVertexAttribPointer(normalId, 3 /*3 elements per vertice*/, GL_FLOAT/*float type*/, GL_FALSE, 0, nullptr);
 
-
 	glEnableVertexAttribArray(Coords_ID); //Activate the Coordenate Attribute for the active VAO
-
 	glEnableVertexAttribArray(Colors_ID); //Activate the Color Attribute for the Active VAO
-
 	glEnableVertexAttribArray(textureID); //Activate the Texture Attribute for the Active VAO
-
 	glEnableVertexAttribArray(normalId); //Activate the Normal Attribute for the Active VAO
 	
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "time"), glfwGetTime());
@@ -337,7 +328,6 @@ void init() {
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotCutoffAngle"), 40.0f);
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotExponent"), 2.0f);
 
-
 	//Material
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.emissive"), 1, value_ptr(vec3(0.0, 0.0, 0.0)));
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.ambient"), 1, value_ptr(model.material.ambient));
@@ -345,17 +335,10 @@ void init() {
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.specular"), 1, value_ptr(model.material.specular));
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.shininess"), model.material.specular_Exponent);
 
-
 	glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ambientSwitch"), 1);
 	glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalSwitch"), 1);
 	glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointSwitch"), 1);
-	glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "coneSwitch"), 1);
-
-	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.emissive"), 1, glm::value_ptr(glm::vec3(0.0, 0.0, 0.0)));
-	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.ambient"), 1, glm::value_ptr(glm::vec3(1.0, 1.0, 1.0)));
-	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.diffuse"), 1, glm::value_ptr(glm::vec3(1.0, 1.0, 1.0)));
-	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.specular"), 1, glm::value_ptr(glm::vec3(1.0, 1.0, 1.0)));
-	//glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "material.shininess"), 12.0f);		
+	glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "coneSwitch"), 1);		
 
 	glViewport(0, 0, screenWidth, screenHeight); //Define viewport Window
 	
@@ -396,8 +379,7 @@ void display(GLFWwindow *window) {
 
 	camera.update();
 
-	//View Matrix - Camera
-	View = camera.viewMatrix;
+	View = camera.viewMatrix; //View Matrix - Camera
 
 	Projection = perspective(radians(45.0f), aspectRatio, nearPlane, farPlane); //Projection Matrix
 
@@ -408,10 +390,6 @@ void display(GLFWwindow *window) {
 	mat4 ModelViewProjection = Projection * View * LocalWorld;
 
 	NormalMatrix = inverseTranspose(mat3(ModelView));
-	//NormalMatrix = ModelView;
-
-	//GLint mvp_ID = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "MVP");
-	//glProgramUniformMatrix4fv(ShaderProgram, mvp_ID, 1, GL_FALSE, glm::value_ptr(ModelViewProjection));
 	
 	// Attributes value to the uniform model
 	GLint modelId = glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "Model");
@@ -431,30 +409,29 @@ void display(GLFWwindow *window) {
 
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "time"), elapsedTime);
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.position"), 1, value_ptr(camera.position));
-	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr(normalize(camera.direction)));
+	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr(normalize(camera.direction)));
+	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr(camera.direction));
 
 	//cout << "Camera X: " << camera.camLocation.x << "Camera Y: " << camera.camLocation.y << "Camera Z: " << camera.camLocation.z << endl;
 
 	// Activates the VAOs
-	glBindVertexArray(VAOs[0]);
+	for (int i = 0; i < SceneTotalVAOs; i++)
+	{
+		glBindVertexArray(VAOs[i]); //Bind VAO
+	}
+
 
 	//Draws Primitives GL_TRIANGLES using active VAOs
-	glDrawArrays(GL_TRIANGLES, 0, numVertices);	
+	glDrawArrays(GL_TRIANGLES, 0, SceneTotalVertices);	
 
 	glfwSwapBuffers(window); //Buffers
 	glfwPollEvents(); //Events
 }
 
-
-
-
 //-----------------------------------Inputs bellow -----------------------------------------
 void InputManager(GLFWwindow* window, int key, int scancode, int action, int mods) { //Keys Input manager
 	if (action == GLFW_PRESS) {
-		GLint value;
-
-		camera.KeyboardControl(key, mods);
-
+		camera.KeyboardControl(key, mods); //Camera's keyboard Controls
 		switch (key)
 		{
 		case GLFW_KEY_ESCAPE:
@@ -462,61 +439,16 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 			glfwSetWindowShouldClose(window, 1); //asks to close
 			break;
 		case GLFW_KEY_1: //Activate/Deactivate Ambient Light
-
-			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ambientSwitch"), &value);
-			if (value == 1) {
-				value = 0;
-				cout << "Ambient Light is now off" << endl;
-			}
-			else {
-				value = 1;
-				cout << "Ambient Light is now on" << endl;
-			}
-			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "ambientSwitch"), value);
-
+			switchLight("ambientSwitch");	
 			break;
 		case GLFW_KEY_2: //Activate/Deactivate Directional Light
-
-			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalSwitch"), &value);
-			if (value == 1) {
-				value = 0;
-				cout << "Directional Light is now off" << endl;
-			}
-			else {
-				value = 1;
-				cout << "Directional Light is now on" << endl;
-			}
-			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "directionalSwitch"), value);
-
-
+			switchLight("directionalSwitch");
 			break;
 		case GLFW_KEY_3: //Activate/Deactivate Point Light
-
-			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointSwitch"), &value);
-			if (value == 1) {
-				value = 0;
-				cout << "Point Light is now off" << endl;
-			}
-			else {
-				value = 1;
-				cout << "Point Light is now on" << endl;
-			}
-			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "pointSwitch"), value);
-
+			switchLight("pointSwitch");			
 			break;
 		case GLFW_KEY_4: //Activate/Deactivate Cone Light
-
-			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "coneSwitch"), &value);
-			if (value == 1) {
-				value = 0;
-				cout << "Cone Light is now off" << endl;
-			}
-			else {
-				value = 1;
-				cout << "Cone Light is now on" << endl;
-			}
-			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "coneSwitch"), value);
-
+			switchLight("coneSwitch");
 			break;
 		case GLFW_KEY_5:
 			setFullScreen(window);					//Sets FullScreen
@@ -525,22 +457,16 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 			setWindowedScreen(window);				//Sets Windowed Mode
 			break;
 		case GLFW_KEY_F1: //Disable Deformation
-			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), &value);
-			value = 0;
 			cout << "Stopped Deformations" << endl;
-			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), value);
+			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), 0);
 			break;
 		case GLFW_KEY_F2: //Enable Deformation
-			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), &value);
-			value = 1;
 			cout << "Model Ripple Deformation" << endl;
-			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), value);
+			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), 1);
 			break;
 		case GLFW_KEY_F3: //Enable Deformation
-			glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), &value);
-			value = 2;
 			cout << "Model Expansion Deformation" << endl;
-			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), value);
+			glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "deforming"), 2);
 			break;
 		case GLFW_KEY_R:
 			if (isRotating) isRotating = false;
@@ -550,8 +476,24 @@ void InputManager(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 }
 
-void modsInput(GLFWwindow* window, unsigned int codepoint, int mods) { //Mods Inputmanager
+void switchLight(string light) {
+	int value;
 
+	const char *lightC = light.c_str();
+
+	glGetUniformiv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, lightC), &value);
+	if (value == 1) {
+		value = 0;
+		cout << lightC <<" is now off" << endl;
+	}
+	else {
+		value = 1;
+		cout << lightC << " is now on" << endl;
+	}
+	glProgramUniform1i(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, lightC), value);
+}
+
+void modsInput(GLFWwindow* window, unsigned int codepoint, int mods) { //Mods Inputmanager
 	if (codepoint == 'a' && mods == GLFW_MOD_SHIFT) {
 		cout << "shift + a" << endl;
 	}	
