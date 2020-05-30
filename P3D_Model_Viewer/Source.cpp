@@ -325,7 +325,7 @@ void init() {
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.linear"), 0.06f);
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.quadratic"), 0.02f);
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr( camera.direction ));
-	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotCutoffAngle"), 40.0f);
+	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotCutoffAngle"), 5.0f);
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.spotExponent"), 2.0f);
 
 	//Material
@@ -410,7 +410,7 @@ void display(GLFWwindow *window) {
 	glProgramUniform1f(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "time"), elapsedTime);
 	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.position"), 1, value_ptr(camera.position));
 	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr(normalize(camera.direction)));
-	glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr(camera.direction));
+	//glProgramUniform3fv(ShaderProgram, glGetProgramResourceLocation(ShaderProgram, GL_UNIFORM, "spotLight.direction"), 1, value_ptr(camera.direction));
 
 	//cout << "Camera X: " << camera.camLocation.x << "Camera Y: " << camera.camLocation.y << "Camera Z: " << camera.camLocation.z << endl;
 

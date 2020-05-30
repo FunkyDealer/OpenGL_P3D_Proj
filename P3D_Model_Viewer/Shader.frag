@@ -185,6 +185,7 @@ vec4 calcSpotLight(SpotLight light) {
 	vec3 lightPositionEyeSpace = (View * vec4(light.position, 1.0)).xyz;
 	vec3 lightDirectionEyeSpace = normalize(vec4(light.direction,1.0) * View).xyz;
 	vec3 L = normalize(lightPositionEyeSpace - vPositionEyeSpace);
+	//vec3 L = normalize(-lightDirectionEyeSpace);
 	vec3 N = normalize(vNormalEyeSpace);
 	float NdotL = max(dot(N, L), 0.0);
 	vec4 diffuse = vec4(material.diffuse * light.diffuse, 1.0) * NdotL;
@@ -201,9 +202,10 @@ vec4 calcSpotLight(SpotLight light) {
 	float dist = length(mat3(View) * light.position - vPositionEyeSpace); //Computes the distance between a light point and a vertex
 	float attenuation = 1.0 / (light.constant + light.linear * dist + light.quadratic * (dist * dist));
 	   
-	float spotDot = dot(normalize(light.direction), -L);
+	float spotDot = dot(-V,normalize(light.direction));	
+	//float spotDot = dot(normalize(light.direction), -L);
 	spotDot = max(spotDot,0);
-	//float spotDot = dot(-V,normalize(light.direction));	
+
 	float spotAttenuation;  // spotlight attenuation factor	
 
 	if (acos(spotDot) < radians(light.spotCutoffAngle)) { //Cut off Angle	   

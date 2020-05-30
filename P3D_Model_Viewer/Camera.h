@@ -121,24 +121,24 @@ namespace Model_Viewer {
 				//YPR = Rotz * Roty * Rotx;
 				//YPR = Rotx;
 				//YPR = Roty;
-				vec3 verticalAxis = cross(forward, up);
-				vec3 horizontalAxis = up;
+				vec3 verticalAxis = cross(forward, up); //Axis for rotating vertically
+				vec3 horizontalAxis = up; //Axis for rotating Horizontally
 				
 
-				position = position * AngleAxis(yoffset, verticalAxis);
+				position = position * AngleAxis(yoffset, verticalAxis); //multiply position by the rotation quaternion
 				position = position * AngleAxis(xoffset, horizontalAxis);
 
 				//position = position * YPR;
 			}
 
-			direction = normalize(target - position);
-			forward = direction;
+			direction = normalize(target - position); //Update direction
+			forward = direction; //Update Forward
 
 			//cout << position.x << " " << position.y << " " << position.z << endl;
 
 			viewMatrix = lookAt(
 				position,	// Camera Position in the World
-				direction,	// Direction at which the camera Is Pointing
+				target,	// Target at which the camera Is Pointing
 				up		// Camera Up Vector
 			);
 		}
@@ -147,7 +147,9 @@ namespace Model_Viewer {
 			switch (key) {
 			case GLFW_KEY_UP:
 				if (mods == GLFW_MOD_CONTROL) position += up;			//Changes Camera Position(Height)
-				else { target += vec3(0.0, 1.0, 0.0); }								//Changes Camera's Target Position(Height)
+				else { target += vec3(0.0, 1.0, 0.0);
+				cout << "target x: " << target.x << "target x: " << target.y << "target x: " << target.z << endl;
+				}								//Changes Camera's Target Position(Height)
 
 				break;
 			case GLFW_KEY_DOWN:
@@ -174,6 +176,8 @@ namespace Model_Viewer {
 				float distance = length(target - position);
 					if (distance > 1) {
 						position += this->forward;
+
+						cout << "cam position x: " << position.x << "cam position x: " << position.y << "cam position x: " << position.z << endl;
 					}
 
 			//	cout << position.x << " " << position.y << " " << position.z << endl;
