@@ -5,13 +5,16 @@
 #include <glm\glm.hpp>
 #define GLFW_USE_DWM_SWAP_INTERVAL       
 #include <GLFW\glfw3.h>
+#include <glm/gtc/quaternion.hpp>
 using namespace glm;
 
 namespace Model_Viewer {
 
 	class Camera {
-
-
+	private:
+		float sensivity = 0.1f;
+		quat rotationQuaternion;
+		
 
 	public:
 		GLfloat zoom = 10.0f;
@@ -26,16 +29,17 @@ namespace Model_Viewer {
 
 
 		float rotX = 0, rotY = 0;
-		vec2 MousePos, lastMP;
+		vec2 mousePos, lastMousePos;
 		bool canRotate = false;
 
 		mat3 YPR = mat3(1);
 
 		mat4 viewMatrix;
+		
 
 		Camera() {
-			zoom = 10.0f;
 
+			zoom = 10.0f;
 			position = vec3(0.0f, camHeight, zoom);
 			target = vec3(0.0f, 0.0f, 0.0f);
 			direction = normalize(target - position);
@@ -47,6 +51,7 @@ namespace Model_Viewer {
 				direction,	// Direction at which the camera Is Pointing
 				up		// Camera Up Vector
 			);
+
 
 			cout << position.x << " " << position.y << " " << position.z << endl;
 		}
@@ -87,22 +92,21 @@ namespace Model_Viewer {
 			//Update Camera  Data
 			if (canRotate)
 			{
-				float xoffset = MousePos.x - lastMP.x;
-				float yoffset = lastMP.y - MousePos.y;
+				float xoffset = mousePos.x - lastMousePos.x;
+				float yoffset = lastMousePos.y - mousePos.y;
 
-				lastMP = MousePos;
+				lastMousePos = mousePos;
 
-				rotX += xoffset * 0.01;
-				rotY += yoffset * 0.01;
+				xoffset *= sensivity;
+				yoffset *= sensivity;
+/*
+				rotX += xoffset;
+				rotY += yoffset;
 
-				if (rotY > 89)
-				{
-					rotY = 89;
-				}
-				else if (rotY < -89)
-				{
-					rotY = -89;
-				}		
+				if (rotY > 89.0f)
+					rotY = 89.0f;
+				else if (rotY < -89.0f)
+					rotY = -89.0f;	*/					
 
 				//vec3 dir;
 				//
@@ -110,17 +114,21 @@ namespace Model_Viewer {
 				//dir.z = sin(radians(rotX));
 				//dir.y = sin(radians(rotY)) * cos(radians(rotY));
 
-				mat3 Rotz = mat3(1);
-				mat3 Roty = { {cos(radians(rotX)),0,sin(radians(rotX))},{0,1,0},{-sin(radians(rotX)),0,cos(radians(rotX))} };
-				mat3 Rotx = { {1,0,0},{0,cos(radians(rotY)),-sin(radians(rotY))},{0,sin(radians(rotY)),cos(radians(rotY))} };
-
-				
+			//	mat3 Rotz = mat3(1);
+			//	mat3 Roty = { {cos(radians(rotX)),0,sin(radians(rotX))},{0,1,0},{-sin(radians(rotX)),0,cos(radians(rotX))} };
+			//	mat3 Rotx = { {1,0,0},{0,cos(radians(rotY)),-sin(radians(rotY))},{0,sin(radians(rotY)),cos(radians(rotY))} };				
 
 				//YPR = Rotz * Roty * Rotx;
 				//YPR = Rotx;
-				YPR = Roty;
+				//YPR = Roty;
+				vec3 verticalAxis = cross(forward, up);
+				vec3 horizontalAxis = up;
+				
 
-				position = position * YPR;
+				position = position * AngleAxis(yoffset, verticalAxis);
+				position = position * AngleAxis(xoffset, horizontalAxis);
+
+				//position = position * YPR;
 			}
 
 			direction = normalize(target - position);
@@ -152,9 +160,12 @@ namespace Model_Viewer {
 
 		void MouseControl(bool mouse1Pressed, double xpos, double ypos) {
 			if (mouse1Pressed) {
+				
+
 
 			}
-			MousePos = vec2(xpos, ypos);
+			mousePos = vec2(xpos, ypos);
+			
 		}
 
 		void ScrollControl(double xoffset, double yoffset) {
@@ -177,7 +188,14 @@ namespace Model_Viewer {
 
 	private:
 
-	
+		quat AngleAxis(float angle, vec3& axis) {
+			vec3 vn = normalize(axis); //Normalized Axis
+			angle = radians(angle); //angle to radians
+			angle *= 0.5f;
+			float sinAngle = sin(angle);
+
+			return quat(cos(angle), vn.x * sinAngle, vn.y * sinAngle, vn.z * sinAngle);
+		}
 		
 
 	};

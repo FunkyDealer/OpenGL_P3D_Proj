@@ -91,7 +91,7 @@ vec2 mouse1PressLocation = vec2(0, 0);
 
 float deltaTime = 0;
 float elapsedTime = 0;
-float oldTimeSinceStart = 0;
+float lastFrameTime = 0; //Time since last Frame
 
 bool isRotating = false;
 
@@ -369,9 +369,9 @@ void display(GLFWwindow *window) {
 	static const float grey[] = { 0.4f, 0.4f, 0.4f, 1.0f }; //Grey Color
 
 	elapsedTime = glfwGetTime();
-	float timeSinceStart = elapsedTime;
-	deltaTime = timeSinceStart - oldTimeSinceStart;
-	oldTimeSinceStart = timeSinceStart;
+	float currentFrameTime = elapsedTime;
+	deltaTime = currentFrameTime - lastFrameTime;
+	lastFrameTime = currentFrameTime;
 
 	//cout << "deltatime " << deltaTime << endl;
 
@@ -572,7 +572,7 @@ void MouseClickCallBack(GLFWwindow* window, int button, int action, int mods) { 
 		glfwGetCursorPos(window, &x, &y);
 
 		mouse1PressLocation = vec2(x, y);
-		camera.lastMP = camera.MousePos;
+		camera.lastMousePos = camera.mousePos;
 		camera.canRotate = true;
 	}
 	else if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_RELEASE) {
