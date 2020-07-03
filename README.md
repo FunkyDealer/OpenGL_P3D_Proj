@@ -24,6 +24,6 @@ Controls:
 
 Group:
 
-Pedro Almeida (me)
-Tiago Oliveira
+(me)Pedro Almeida |
+Tiago Oliveira |
 Carlos Passos
